@@ -20,4 +20,6 @@ function process_spk_file(spk_path, output_path)
 
     [spk_dir, spk_name] = fileparts(spk_path);
     output_path = fullfile(spk_dir, [spk_name, '.mat']);
-    save(output_path, 'feat_cell', 'model_cell', 'clust_cell');
+    save(output_path, 'feat_cell', 'model_cell', 'clust_cell', 'spk_cell');
+
+function create_neural_units()
