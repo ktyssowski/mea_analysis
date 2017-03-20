@@ -8,33 +8,31 @@ classdef ElectrodeContainer < handle
         valid_class
         spike_times
         features
+        cluster_model
+        n_clusters
     end
     
     methods
-        function obj = ElectrodeContainer(spikes, spike_times, well, electrode, varargin)
-            %% NeuralUnit(spikes, spike_times, well, electrode, varargin)
+        function obj = ElectrodeContainer(spikes, spike_times, varargin)
+            %% NeuralUnit(spikes, spike_times, varargin)
             %
             %   Given a list of
             parser = inputParser();
             parser.addRequired('spikes', @isnumeric);
             parser.addRequired('spike_times', @isnumeric);
-            parser.addRequired('well');
-            parser.addRequired('electrode');
             parser.addParameter('valid', true);
             parser.addParameter('class_no', 0);
             parser.addParameter('features', false);
-            parser.addParameter('models', false);
-            parser.addParemeter('n_clusters', 1)
+            parser.addParameter('cluster_model', false);
+            parser.addParameter('n_clusters', 1)
             
-            parser.parse(spikes, well, electrode, varargin{:});
+            parser.parse(spikes, spike_times, varargin{:});
             obj.spikes = parser.Results.spikes;
             obj.spike_times = parser.Results.spike_times;
-            obj.well = parser.Results.well;
-            obj.electrode = parser.Results.electrode;
             obj.class_no = parser.Results.class_no;
-            obj.valid_class = parser.Reults.valid;
+            obj.valid_class = parser.Results.valid;
             obj.features = parser.Results.features;
-            obj.models = parser.Results.models;
+            obj.cluster_model = parser.Results.cluster_model;
             obj.n_clusters = parser.Results.n_clusters;
         end
     end

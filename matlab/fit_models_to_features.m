@@ -21,16 +21,32 @@ args = parser.Results;
 
 switch args.cluster_mode
     case 'pca'
-        fit_gm_ = @(k) fitgmdist(features.pc_scores, k);
+        fit_gm_ = @(k) fit_gm(features.pc_scores, k);
         models = arrayfun(fit_gm_, [args.k_min:args.k_max], 'UniformOutput', false);
     otherwise
         error(['Cluster Mode "', cluster_mode, '" not recognized!']);
+end
+
+if any(contains_numbers(models))
+    models = models(1:find(contains_numbers(models), 1, 'first') - 1);
 end
 
 
 function parser = configure_parser()
     parser = inputParser;
     parser.addRequired('features');
-    parser.addOptional('cluster_mode', 'pca');
+    parser.addOptional('cluster_mode', 'pca', @ischar);
     parser.addParameter('k_max', 5);
     parser.addParameter('k_min', 1);
+
+
+function model = fit_gm(X, k)
+    try
+        model = fitgmdist(X, k);
+    catch
+        model = NaN;
+    end
+
+
+function result = contains_numbers(C)
+    result = cellfun(@isnumeric, C);

@@ -10,7 +10,7 @@ function features = get_spike_features(spikes)
 
 
 n_spikes = length(spikes);
-spike_mat = horzcat(spikes{:}.GetVoltageVector())';
+spike_mat = horzcat(spikes(:).GetVoltageVector())';
 [eigenvectors, eigenvalues, latent] = pca(spike_mat);
 
 features.principal_components = eigenvectors(:, 1:3);
