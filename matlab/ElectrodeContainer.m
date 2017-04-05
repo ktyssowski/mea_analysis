@@ -1,5 +1,4 @@
 classdef ElectrodeContainer < handle
-    
     properties
         well
         electrode
@@ -10,6 +9,7 @@ classdef ElectrodeContainer < handle
         features
         cluster_model
         n_clusters
+        contains_data
     end
     
     methods
@@ -19,7 +19,8 @@ classdef ElectrodeContainer < handle
             %   Given a list of
             parser = inputParser();
             parser.addRequired('spikes', @isnumeric);
-            parser.addRequired('spike_times', @isnumeric);
+            parser.addRequired('spike_times');
+            parser.addParameter('contains_data', true)
             parser.addParameter('valid', true);
             parser.addParameter('class_no', 0);
             parser.addParameter('features', false);
@@ -29,11 +30,16 @@ classdef ElectrodeContainer < handle
             parser.parse(spikes, spike_times, varargin{:});
             obj.spikes = parser.Results.spikes;
             obj.spike_times = parser.Results.spike_times;
+            obj.contains_data = parser.Results.contains_data;
             obj.class_no = parser.Results.class_no;
             obj.valid_class = parser.Results.valid;
             obj.features = parser.Results.features;
             obj.cluster_model = parser.Results.cluster_model;
             obj.n_clusters = parser.Results.n_clusters;
+        end
+
+        function n_spikes = get_number_of_spikes(obj)
+            n_spikes = size(obj.spikes, 1);
         end
     end
 end
