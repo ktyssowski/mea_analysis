@@ -18,8 +18,8 @@ classdef ElectrodeContainer < handle
             %
             %   Given a list of
             parser = inputParser();
-            parser.addRequired('spikes', @isnumeric);
-            parser.addRequired('spike_times');
+            parser.addOptional('spikes', [], @isnumeric);
+            parser.addOptional('spike_times', []);
             parser.addParameter('contains_data', true)
             parser.addParameter('valid', true);
             parser.addParameter('class_no', 0);
@@ -27,7 +27,7 @@ classdef ElectrodeContainer < handle
             parser.addParameter('cluster_model', false);
             parser.addParameter('n_clusters', 1)
             
-            parser.parse(spikes, spike_times, varargin{:});
+            parser.parse(varargin{:});
             obj.spikes = parser.Results.spikes;
             obj.spike_times = parser.Results.spike_times;
             obj.contains_data = parser.Results.contains_data;

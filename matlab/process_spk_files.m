@@ -3,34 +3,52 @@ function process_spk_file(spk_paths, output_path)
     %
     % processes one or more 
 
-    spk_datasets = load_axis_datasets(spk_paths)
-    spk_cell = cellfun(@horzcat, spk_datasets{:}, 'UniformOutput', false);
-    size(spk_cell)
-    feat_cell = cell(size(spk_cell));
-    model_cell = cell(size(spk_cell));
-    clust_cell = cell(size(spk_cell));
-
-    for i = 1:numel(spk_cell)
-        disp(['Num Spikes: ', num2str(length(spk_cell{i}))])
-        if length(spk_cell{i}) > 20 % Feature Extraction requires at least three spikes
-            features = get_spike_features(spk_cell{i});
-            models = fit_models_to_features(features, 'pca');
-            clusters = cellfun(@(m) m.cluster(features.pc_scores), models, 'UniformOutput', false);
-            feat_cell{i} = features;
-            model_cell{i} = models;
-            clust_cell{i} = clusters;
-        end
-    end
-
-    container_cells = cellfun(@cells_to_container, spk_cell, feat_cell, model_cell, clust_cell, 'UniformOutput', false);
-    electrode_containers = reshape([container_cells{:}], size(container_cells))
-
     if ~exist('output_path', 'var')
         [spk_dir, spk_name] = fileparts(spk_paths{1});
         output_path = fullfile(spk_dir, [spk_name, '.mat']);
         disp(['Output path not specified! Saving to ', output_path])
     end
-    save(output_path, 'electrode_containers', '-v7.3');
+
+    axis_loader = AxisLoader(spk_paths);
+    output_file = matfile(output_path, 'Writable', true);
+    cell_shape = axis_loader.get_cell_shape();
+    feat_cell = cell(cell_shape);
+    model_cell = cell(cell_shape);
+    clust_cell = cell(cell_shape);
+    % This is how you have to preallocate object containers in matlab
+    output_file.electrode_containers = cell(cell_shape);
+
+    for i = 1:axis_loader.num_channels
+        [spike_data, channel] = axis_loader.load_next_data_set();
+        disp(['Num Spikes: ', num2str(length(spike_data))])
+        if length(spike_data) > 20 % Feature Extraction requires at least three spikes
+            features = get_spike_features(spike_data);
+            models = fit_models_to_features(features, 'pca');
+            clusters = cellfun(@(m) m.cluster(features.pc_scores), models, 'UniformOutput', false);
+            feat_cell{i} = features;
+            model_cell{i} = models;
+            clust_cell{i} = clusters;
+            output_file.electrode_containers( ...
+                channel.WellRow, ...
+                channel.WellColumn, ...
+                channel.ElectrodeColumn, ...
+                channel.ElectrodeRow ...
+                ) = {cells_to_container( ...
+                spike_data, ...
+                features, ...
+                models, ...
+                clusters ...
+            )};
+        else
+            output_file.electrode_containers( ...
+                channel.WellRow, ...
+                channel.WellColumn, ...
+                channel.ElectrodeColumn, ...
+                channel.ElectrodeRow ...
+                ) = {ElectrodeContainer()};
+        end
+    end
+
 
 function datasets = load_axis_datasets(filepaths)
     datasets = cell(size(filepaths));
