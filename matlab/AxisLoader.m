@@ -9,7 +9,7 @@ classdef AxisLoader < handle
 
     methods
         function obj = AxisLoader(data_paths, varargin)
-        %% obj = AxisLoader(data_paths, varargin)
+        %% obj = AxisLoader(data_paths)
         %
         % An object for loading data from multiple 
             parser = inputParser();
