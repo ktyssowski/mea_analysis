@@ -12,7 +12,7 @@ classdef ElectrodeContainer < handle
     end
     
     methods
-        function obj = ElectrodeContainer(spike_index, varargin)
+        function obj = ElectrodeContainer(varargin)
             %% NeuralUnit(spikes, spike_times, varargin)
             %
             %   Given a list of
