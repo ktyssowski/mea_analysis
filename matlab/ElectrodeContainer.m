@@ -17,15 +17,15 @@ classdef ElectrodeContainer < handle
             %
             %   Given a list of
             parser = inputParser();
-            parser.addRequired('spike_index', @isnumeric);
-            parser.addParameter('contains_data', true)
+            parser.addOptional('spike_index', [], @isnumeric);
+            parser.addParameter('contains_data', true);
             parser.addParameter('valid', true);
             parser.addParameter('class_no', 0);
             parser.addParameter('features', false);
             parser.addParameter('cluster_model', false);
-            parser.addParameter('n_clusters', 1)
+            parser.addParameter('n_clusters', 1);
             
-            parser.parse(spike_index, varargin{:});
+            parser.parse(varargin{:});
             obj.spike_index = parser.Results.spike_index;
             obj.contains_data = parser.Results.contains_data;
             obj.class_no = parser.Results.class_no;
