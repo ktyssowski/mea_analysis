@@ -5,6 +5,7 @@ classdef AxisLoader < handle
         channels
         channel_ind
         num_channels
+        recording_start_time
     end
     
     methods
@@ -24,6 +25,13 @@ classdef AxisLoader < handle
             obj.channels = obj.file_objs{1}.DataSets.ChannelArray.Channels;
             obj.channel_ind = 0;
             obj.num_channels = numel(obj.channels);
+            obj.recording_start_time = datetime('3000-10-06'); % hbd
+            for i = 1:numel(obj.file_objs)
+                file_start_time = spike_time_to_datetime(obj.file_objs{i}.DataSets.Header.FileStartTime);
+                obj.recording_start_time = min( ...
+                    [obj.recording_start_time, file_start_time] ...
+                );
+            end
         end
         
         function assert_consistent_plate_type(obj)
@@ -74,7 +82,7 @@ classdef AxisLoader < handle
                 channel.WellColumn, ...
                 channel.ElectrodeColumn, ...
                 channel.ElectrodeRow ...
-                };
+            };
         end
         
         function data_cell = load_data_cell(obj, channel)
@@ -86,11 +94,11 @@ classdef AxisLoader < handle
             well_string = get_well_string( ...
                 channel.WellRow, ...
                 channel.WellColumn ...
-                );
+            );
             electrode_string = get_electrode_string( ...
                 channel.ElectrodeColumn, ...
                 channel.ElectrodeRow ...
-                );
+            );
             % Even though we are only loading data from individual electrodes,
             %  a full sized cell array is returned
             transfer_cells = cell(size(obj.file_objs));

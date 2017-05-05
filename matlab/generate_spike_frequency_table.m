@@ -1,0 +1,1 @@
+function generate_spike_frequency_table(mat_path, spk_paths)
