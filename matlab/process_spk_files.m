@@ -75,6 +75,7 @@ function process_spk_file(spk_paths, output_path)
     % Write data to the output file
     output_file.electrode_containers = electrode_containers;
     output_file.final_spike_time = final_spike_time;
+    output_file.recording_start_time = axis_loader.recording_start_time;
 
 
 function datasets = load_axis_datasets(filepaths)
