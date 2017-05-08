@@ -34,6 +34,7 @@ function process_spk_file(spk_paths, output_path)
         if length(spike_data) > 20 % Feature Extraction requires at least three spikes
             features = get_spike_features(spike_data); % generate spike features (we only use pca now)
             models = fit_models_to_features(features, 'pca'); % fit models (gmm) to pca
+            n_clusters = estimate_n_clusters(models);
             clusters = cellfun(@(m) m.cluster(features.pc_scores), models, 'UniformOutput', false); % calculate cluster numbers
             spike_times = get_spike_times_from_spike_array(spike_data);
             spike_mat = get_spike_mat_from_spike_array(spike_data);
@@ -53,6 +54,7 @@ function process_spk_file(spk_paths, output_path)
                 'class_no', clusters, ...
                 'contains_data', true, ...
                 'valid', true(size(clusters)), ...
+                'n_clusters', n_clusters, ...
                 'mean_waveforms', mean_waveforms ...
             );
             % Update the final spike time
@@ -88,4 +90,13 @@ function mean_waveforms = get_average_waveforms(spikes, n_clusters, class_number
     mean_waveforms = zeros([n_clusters, size(spikes, 2)]);
     for i = 1:n_clusters
         mean_waveforms(i, :) = mean(spikes(class_numbers == i, :), 1);
+    end
+
+function n_clusters = estimate_n_clusters(models)
+    % has to be done this way since matlab is an nasty betch w/o list comprehensions 0_0
+    n_clusters = 1;
+    for i = 1:numel(models)
+        if models{n_clusters}.BIC < models{i}.BIC
+            n_clusters = i;
+        end
     end
