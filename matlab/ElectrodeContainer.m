@@ -42,6 +42,21 @@ classdef ElectrodeContainer < handle
             obj.mean_waveforms = parser.Results.mean_waveforms;
         end
 
+        function names = get_unit_names(obj)
+            %% names = get_unit_names(obj)
+            %
+            % returns a cell array of unit names of the form [well_string, electrode_string, unit_number]
+            %
+            % ex. Unit 1 on electrode A1-12 would be 'A1121'
+
+            well_ele_name = [ ...
+                get_well_string(obj.spike_index(1), obj.spike_index(2)), ...
+                get_electrode_string(obj.spike_index(3), obj.spike_index(4)) ...
+            ];
+            name_generator = @(n) sprintf([well_ele_name, '%d'], n);
+            names = arrayfun(name_generator, 1:obj.n_clusters, 'UniformOutput', false);
+        end
+
         function spk_container = create_spike_container(obj, spikes)
             spk_container = SpikeContainer( ...
                 spikes, ...
