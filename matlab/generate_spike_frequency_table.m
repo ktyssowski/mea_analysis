@@ -57,6 +57,6 @@ for iEle = 1:numel(electrode_containers)
     end
 end
 
-spike_table = array2table(frequency_mat, unit_names);
+spike_table = array2table(frequency_mat, 'VariableNames', unit_names);
 spike_table.time = [recording_start_time:seconds(bin_size):final_spike_time]';
 writetable(spike_table, output_path);
