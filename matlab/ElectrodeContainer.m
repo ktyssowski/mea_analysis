@@ -11,6 +11,7 @@ classdef ElectrodeContainer < handle
         n_clusters
         contains_data
         mean_waveforms
+        % If you add a property here, you must add it to the constructor calls in ElectrodeContainer.create_spike_container() and SpikeContainer.get_electrode_container()
     end
     
     methods
