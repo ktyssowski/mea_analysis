@@ -71,5 +71,13 @@ classdef ElectrodeContainer < handle
                 'mean_waveforms', obj.mean_waveforms ...
             );
         end
+
+        function n_spikes = get_number_of_spikes(obj)
+            if obj.contains_data
+                n_spikes = size(obj.features.pc_scores, 1);
+            else
+                n_spikes = 0;
+            end
+        end
     end
 end

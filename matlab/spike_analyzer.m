@@ -60,7 +60,7 @@ guidata(hObject, handles);
 
 % UIWAIT makes spike_analyzer wait for user response (see UIRESUME)
 % uiwait(handles.figure1);
-handles.plot_spike_means = false;
+handles.plot_spike_means = true;
 handles = load_data(handles);
 handles = analysis_loop(handles);
 
@@ -81,16 +81,8 @@ function handles = load_data(handles)
 %% handles = load_data(handles)
 %
 %  Loads electrode_containers from a mat file and initializes the current container as the first
-    [mat_filename, mat_dirname] = uigetfile('*.mat', 'Select matfile to load')
-    handles.mat_path = fullfile(mat_dirname, mat_filename)
-    [spike_filenames, spike_dirname] = uigetfile('*.spk', 'Select spkfile(s) to load', 'MultiSelect', 'on');
-    full_spike_path = @(spike_filename) fullfile(spike_dirname, spike_filename);
-    spike_paths = cellfun(full_spike_path, spike_filenames, 'UniformOutput', false)
-    if iscell(spike_paths)
-        handles.spike_paths = spike_paths;
-    else
-        handles.spike_paths = {spike_paths};
-    end
+    handles.mat_path = get_mat_path();
+    handles.spike_paths = get_spike_paths();
     handles.axis_loader = AxisLoader(handles.spike_paths);
     data_struct = load(handles.mat_path, 'electrode_containers');
     handles.electrode_containers = data_struct.electrode_containers;
@@ -101,11 +93,24 @@ function handles = load_data(handles)
         handles = next_electrode(handles);
     end
 
+function mat_path = get_mat_path()
+    [mat_filename, mat_dirname] = uigetfile('*.mat', 'Select matfile to load')
+    mat_path = fullfile(mat_dirname, mat_filename);
+
+function spike_paths = get_spike_paths()
+    [spike_filenames, spike_dirname] = uigetfile('*.spk', 'Select spkfile(s) to load', 'MultiSelect', 'on');
+    % uigetfile returns a cell if multiple files are selected but a string if only one file is selected
+    if iscell(spike_filenames) 
+        spike_filenames = spike_filenames;
+    else
+        spike_filenames = {spike_filenames};
+    end
+    full_spike_path = @(spike_filename) fullfile(spike_dirname, spike_filename);
+    spike_paths = cellfun(full_spike_path, spike_filenames, 'UniformOutput', false)
+
 function handles = load_curr_container(handles)
     electrode_container = handles.electrode_containers(handles.curr_index)
-    spk_data = handles.axis_loader.load_data_set_from_index(electrode_container.spike_index)
-    spikes = horzcat(spk_data(:).GetVoltageVector())';
-    handles.curr_container = electrode_container.create_spike_container(spikes);
+    handles.curr_container = electrode_container.create_spike_container(handles.axis_loader);
     n_spikes = handles.curr_container.get_number_of_spikes();
     n_sample_spikes = 1000; %% TODO set as param
     if n_spikes > n_sample_spikes 
@@ -134,7 +139,7 @@ function handles = refresh_display(handles)
     handles = plot_features(handles);
     axes(handles.secondary_axes)
     if handles.plot_spike_means
-        handles = plot_spike_means(handles)
+        handles = plot_spike_means(handles);
     else
         handles = plot_spikes(handles);
     end
@@ -155,19 +160,19 @@ function handles = plot_spikes(handles)
 %
 %
     handles.spike_handles = cell(size(handles.sample_spikes));
+    spikes = handles.curr_container.get_spikes();
     for i = 1:length(handles.sample_spikes)
         spike_no = handles.sample_spikes(i);
-        handles.spike_handles{i} = plot(handles.curr_container.spikes(spike_no, :));
+        handles.spike_handles{i} = plot(spikes(spike_no, :));
         hold on
     end
     hold off
 
 function handles = plot_spike_means(handles)
     handles.spike_mean_handles = cell(size(handles.curr_container.n_clusters, 1));
+    mean_spikes = handles.curr_container.mean_waveforms{handles.curr_container.n_clusters};
     for iCluster = 1:handles.curr_container.n_clusters
-        cluster_spikes = handles.curr_container.class_no{handles.curr_container.n_clusters} == iCluster;
-        mean_spike = mean(handles.curr_container.spikes(cluster_spikes, :), 1);
-        handles.spike_mean_handles{iCluster} = plot(mean_spike, 'LineWidth', 2);
+        handles.spike_mean_handles{iCluster} = plot(mean_spikes(iCluster, :), 'LineWidth', 2);
         hold on
     end
     hold off
@@ -204,6 +209,13 @@ function handles = refresh_colors(handles)
     handles.scatter_handle.CData = c_data;
 
 %% ----------------- MISC ---------------- %%
+function disp_progress_msg(handles)
+    disp([ ...
+       'Analyzing electrode ', ...
+       num2str(handles.curr_index), ...
+       ' of ', ...
+       num2str(numel(handles.electrode_containers))...
+    ]);
 
 function disp_skip_msg(handles)
     disp([
@@ -274,6 +286,7 @@ function handles = next_electrode(handles)
         disp_skip_msg(handles);
         handles = next_electrode(handles);
     end
+    disp_progress_msg(handles);
 
 function handles = prev_electrode(handles)
     if handles.curr_index > 1
@@ -290,6 +303,7 @@ function handles = prev_electrode(handles)
         disp_skip_msg(handles);
         handles = prev_electrode(handles);
     end
+    disp_progress_msg(handles);
 
 function [handles, keep_looping] = prompt_exit(handles)
     %% TODO
