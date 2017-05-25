@@ -109,7 +109,7 @@ function spike_paths = get_spike_paths()
     spike_paths = cellfun(full_spike_path, spike_filenames, 'UniformOutput', false)
 
 function handles = load_curr_container(handles)
-    electrode_container = handles.electrode_containers(handles.curr_index)
+    electrode_container = handles.electrode_containers(handles.curr_index);
     handles.curr_container = electrode_container.create_spike_container(handles.axis_loader);
     n_spikes = handles.curr_container.get_number_of_spikes();
     n_sample_spikes = 1000; %% TODO set as param
@@ -149,7 +149,6 @@ function handles = plot_features(handles)
 %% plot_features(container)
 %
 % Creates a 3d scatter plot of the data in pc space
-    handles.curr_container
     features = handles.curr_container.features.pc_scores(handles.sample_spikes, :); 
     handles.scatter_handle = scatter3(features(:, 1), features(:, 2), features(:, 3), 'filled');
     labels = arrayfun(@num2str, 1:handles.curr_container.n_clusters, 'UniformOutput', false);
