@@ -29,34 +29,31 @@ electrode_containers = mat_data.electrode_containers;
 final_spike_time = mat_data.final_spike_time;
 recording_start_time = mat_data.recording_start_time;
 
-num_units = sum([mat_data.electrode_containers(:).n_clusters]);
-num_bins = ceil((final_spike_time - recording_start_time)/seconds(bin_size));
+% only work with the containers that actually have data
+containers_with_data = electrode_containers([electrode_containers(:).contains_data]);
+num_units = sum([containers_with_data(:).n_clusters]);
+num_bins = floor((final_spike_time - recording_start_time)/seconds(bin_size));
 
 frequency_mat = zeros([num_bins, num_units]);
 
 curr_unit = 1;
 unit_names = {};
-for iEle = 1:numel(electrode_containers)
-    curr_container = electrode_containers(iEle);
+for curr_container = containers_with_data(:)'
     unit_names = [unit_names, curr_container.get_unit_names()];
     for iClust = 1:curr_container.n_clusters
-        % skip processing if no data is present (i.e. not enough spikes were detected for clustering)
-        if curr_container.contains_data
-            % extract the spike_times corresponding to spikes belonging to the current unit
-            unit_spike_times = curr_container.spike_times( ...
-                curr_container.class_no{curr_container.n_clusters} == iClust ...
-            );
-            frequency_mat(:, curr_unit) = generate_frequency_timecourse( ...
-                unit_spike_times, ...
-                'start_time', recording_start_time, ...
-                'end_time', final_spike_time, ...
-                'bin_size', bin_size ...
-            );
-        end
+        unit_spike_times = curr_container.spike_times( ...
+            curr_container.class_no{curr_container.n_clusters} == iClust ...
+        );
+        frequency_mat(:, curr_unit) = generate_frequency_timecourse( ...
+            unit_spike_times, ...
+            'start_time', recording_start_time, ...
+            'end_time', final_spike_time, ...
+            'bin_size', bin_size ...
+        );
         curr_unit = curr_unit + 1;
     end
 end
 
 spike_table = array2table(frequency_mat, 'VariableNames', unit_names);
-spike_table.time = [recording_start_time:seconds(bin_size):final_spike_time]';
+spike_table.time = [recording_start_time + seconds(bin_size):seconds(bin_size):final_spike_time]';
 writetable(spike_table, output_path);

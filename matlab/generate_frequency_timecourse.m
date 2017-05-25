@@ -29,17 +29,12 @@ start_time = parser.Results.start_time;
 end_time = parser.Results.end_time;
 bin_size = parser.Results.bin_size;
 
-edges = [start_time:seconds(bin_size):end_time]';
-freq = zeros(size(edges));
-spike_times = sort(spike_times);
-curr_spike_ind = 1;
-for i = 1:length(edges)
-    while spike_times(curr_spike_ind) < edges(i)
-        freq(i) = freq(i) + 1;
-        if curr_spike_ind < length(spike_times)
-            curr_spike_ind = curr_spike_ind + 1;
-        else
-            break;
-        end
-    end
-end
+[freq, edges] = compute_freq_bins(spike_times, start_time, end_time, bin_size);
+
+function [freq, edges] = compute_freq_bins(spike_times, start_time, end_time, bin_size)
+    edges = [0:bin_size:seconds(end_time - start_time)]';
+    spike_times = seconds(spike_times - start_time);
+    spike_accumulator = bsxfun(@le, spike_times, edges);
+    spike_counts = sum(spike_accumulator, 2);
+    freq = diff(spike_counts);
+    edges = edges(2:end); % edges represent the trailing edge, and the first edge here is the start of the recording
