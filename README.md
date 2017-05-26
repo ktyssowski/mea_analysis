@@ -35,7 +35,7 @@ Installing the Matlab code
 All of the matlab dependencies required by this package are included with the repo. All you need to do is add them to your path. The easiest way to do this is to use the buttons on the matlab console. Open matlab, and select the "set path" option:
 ![alt text](https://github.com/sdrendall/mea_analysis/blob/master/tutorial_pictures/click_set_path.png?raw=true "Select Set Path")
 Choose the "Add with Subfolders" option:
-![alt text](https://github.com/sdrendall/mea_analysis/blob/master/tutorial_pictures/click_add_with_subfolders.png?raw=true "select Add With Subfolders")
+![alt text](https://github.com/sdrendall/mea_analysis/blob/master/tutorial_pictures/click_add_with_sub_folders.png?raw=true "select Add With Subfolders")
 Navigate to and select the `matlab` folder within the `mea_analysis` directory:
 ![alt text](https://github.com/sdrendall/mea_analysis/blob/master/tutorial_pictures/select_matlab_folder.png?raw=true "Select the Matlab Folder")
 Click "save" to save the changes to your Matlab path:
