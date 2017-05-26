@@ -27,6 +27,14 @@ def smooth(A, kernel_size=5, mode='same'):
 def plot_unit(time, unit):
     plt.plot(time, unit)
 
+def plot_unit_traces(category_dataframe, **plot_kwargs):
+    """
+    Plots spike frequency unit traces for each neural unit in the provided category dataframe
+    """
+    for unit in category_dataframe['unit_name'].unique():
+        unit_table = category_dataframe.query('unit_name == @unit')
+        plt.plot(unit_table['time'], unit_table['spike_freq'], **plot_kwargs)
+
 def average_timecourse_plot(category_dataframe, **kwargs):
     """
     Generates an average timecourse with error bars for each category in category_dataframe
