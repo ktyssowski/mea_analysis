@@ -240,16 +240,11 @@ function command = get_command(handles)
     axes(handles.main_axes);
     [~, ~, command] = ginput(1);
 
-function handles = set_n_clust(handles)
+function handles = set_n_clust(handles, n_clust)
 %% handles = set_n_clust(handles)
 %
 %  Queries the user for the number of clusters to use
     max_clusters = length(handles.curr_container.cluster_model);
-    response = inputdlg(['Input the number of clusters (Max:', num2str(max_clusters), ' )']);
-    if isempty(response) || isempty(response{1})
-        return % return without doing anything if no input is given
-    end
-    n_clust = uint8(response{1}) - 48;
     if n_clust > 0 && n_clust <= max_clusters
         handles.curr_container.n_clusters = n_clust;
         handles.curr_container.valid_class = true(n_clust, 1);
@@ -313,8 +308,9 @@ function handles = analysis_loop(handles)
     while keep_looping
         command = get_command(handles);
         switch command
-            case 'c'
-                handles = set_n_clust(handles);
+            case {'1', '2', '3', '4', '5'}
+                n_clust = uint8(command) - 48
+                handles = set_n_clust(handles, n_clust);
                 if handles.plot_spike_means
                     axes(handles.secondary_axes)
                     handles = plot_spike_means(handles);
