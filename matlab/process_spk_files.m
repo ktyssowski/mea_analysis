@@ -1,4 +1,4 @@
-function process_spk_file(spk_paths, output_path)
+function process_spk_files(spk_paths, output_path)
     %% process_spk_file(spk_paths, output_path)
     %
     % processes one or more 
