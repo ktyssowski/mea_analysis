@@ -13,11 +13,29 @@ def well_row_letter_to_number(letter):
     """
     return ord(letter) - 64
 
+def get_row_number(unit_name):
+    """
+    Returns the row_number corresponding to the row_number of the 
+        unit specified by unit_name. Useful for filtering rows by condition.
+    """
+    row_num = well_row_letter_to_number(unit_name[0])
+    return row_num
+
+def get_col_number(unit_name):
+    """
+    Returns the col_number tuple corresponding to the column of the 
+        unit specified by unit_name. Useful for filtering rows/columns by condition.
+    """
+    col_num = int(unit_name[1])
+    return col_num
+
 def get_row_col_number_tuple(unit_name):
     """
     Returns the (row_number, col_number) tuple corresponding to the row_number and column of the 
         unit specified by unit_name. Useful for filtering rows/columns by condition.
     """
-    row_num = well_row_letter_to_number(unit_name[0])
-    col_num = int(unit_name[1])
+    row_num = get_row_number(unit_name)
+    col_num = get_col_number(unit_name)
     return (row_num, col_num)
+
+
