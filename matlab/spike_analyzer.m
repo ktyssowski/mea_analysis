@@ -274,13 +274,13 @@ function handles = next_electrode(handles)
     end
     if handles.electrode_containers(handles.curr_index).contains_data
         handles = load_curr_container(handles);
+        disp_progress_msg(handles);
     else
         % this will overflow if all of the electrodes are empty
         % fuck the police
         disp_skip_msg(handles);
         handles = next_electrode(handles);
     end
-    disp_progress_msg(handles);
 
 function handles = prev_electrode(handles)
     if handles.curr_index > 1
@@ -291,13 +291,13 @@ function handles = prev_electrode(handles)
     end
     if handles.electrode_containers(handles.curr_index).contains_data
         handles = load_curr_container(handles);
+        disp_progress_msg(handles);
     else
         % this will overflow if all of the electrodes are empty
         % fuck the police
         disp_skip_msg(handles);
         handles = prev_electrode(handles);
     end
-    disp_progress_msg(handles);
 
 function [handles, keep_looping] = prompt_exit(handles)
     %% TODO

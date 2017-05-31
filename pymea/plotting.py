@@ -106,3 +106,12 @@ def filter_unit_columns(predicate, unit_table):
     unit_column_names = filter(predicate, unit_table.columns)
     for column_name in unit_column_names:
         yield unit_table[column_name]
+
+def smooth_categorized_dataframe_unit_traces(category_dataframe, kernel_size=5):
+    cat_df_copy = category_dataframe.copy()
+    for unit_name in cat_df_copy['unit_name'].unique():
+        unit_table = cat_df_copy.query('unit_name == @unit_name')
+        smooth_trace = smooth(unit_table['spike_freq'], kernel_size=kernel_size, mode='same')
+        cat_df_copy.loc[cat_df_copy['unit_name'] == unit_name, 'spike_freq'] = smooth_trace
+
+    return cat_df_copy
