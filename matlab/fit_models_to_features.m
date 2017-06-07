@@ -42,7 +42,7 @@ function parser = configure_parser()
 
 function model = fit_gm(X, k)
     try
-        model = fitgmdist(X, k, 'Options', setstat('MaxIter', 500));
+        model = fitgmdist(X, k, 'Options', statset('MaxIter', 500));
     catch
         model = NaN;
     end
