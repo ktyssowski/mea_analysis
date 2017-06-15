@@ -119,7 +119,7 @@ def smooth_categorized_dataframe_unit_traces(category_dataframe, kernel_size=5):
     return cat_df_copy
 
 
-def foldInductionPlusMean(condition_setting, title, baseline_end):
+def foldInductionPlusMean(condition_setting, title, baseline_end, cat_table):
     '''
     This function plots baseline-normalized plots for a given condition that include both all of the channels passing a filters and all the mean of those channels
     '''
