@@ -4,6 +4,8 @@ import seaborn as sns
 import numpy as np
 from pymea import matlab_compatibility as mc
 from matplotlib import pyplot as plt
+import random
+
 
 def plot_units_from_spike_table(spike_table):
     time_vector = spike_table['time'].map(mc.datetime_str_to_datetime)
@@ -115,3 +117,33 @@ def smooth_categorized_dataframe_unit_traces(category_dataframe, kernel_size=5):
         cat_df_copy.loc[cat_df_copy['unit_name'] == unit_name, 'spike_freq'] = smooth_trace
 
     return cat_df_copy
+
+
+def foldInductionPlusMean(condition_setting, title, baseline_end):
+    '''
+    This function plots baseline-normalized plots for a given condition that include both all of the channels passing a filters and all the mean of those channels
+    '''
+
+    c = cat_table.query(condition_setting)
+    c_filter = pd.DataFrame()
+
+    for unit_name in c['unit_name'].unique():
+        unit = c.query('unit_name == @unit_name')
+        meanOfUnit = np.mean(unit[120:baseline_end]['spike_freq'])
+        varOfBaseline = np.var(unit[0:baseline_end]['spike_freq'])
+        meanAfterDrug = np.mean(unit[baseline_end+1:len(unit['spike_freq'])]['spike_freq'])
+        if meanOfUnit > 0.01 and varOfBaseline < 0.05 and meanAfterDrug/meanOfUnit > 0.25: #filter out some channels
+            plt.plot(unit['time'], unit['spike_freq']/meanOfUnit, color=(random.random(), random.random(), random.random(), .4))
+            c_filter = c_filter.append(unit, ignore_index=True)
+        else:
+            continue
+    plt.ylabel('Fold Inudction of Spike Frequency (Hz)')
+    plt.ylim(0,7)
+    plt.axhline(y=1, xmin=0, xmax=1, hold=None, color='black')
+    mean_freq_traces = c_filter.groupby(('condition', 'time'))['spike_freq'].mean()
+    mean_freq_traces = mean_freq_traces.rename('spike frequency').reset_index() # Convert the multiindexed series back to a dataframe
+    plt.title(title)
+    meanOfMean = np.mean(mean_freq_traces[0:1208]['spike frequency'])
+    plt.plot(mean_freq_traces['time'], mean_freq_traces['spike frequency']/meanOfMean, color=(0,0,0))
+
+    plt.show()
