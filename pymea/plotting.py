@@ -119,31 +119,105 @@ def smooth_categorized_dataframe_unit_traces(category_dataframe, kernel_size=5):
     return cat_df_copy
 
 
-def foldInductionPlusMean(condition_setting, title, baseline_end, cat_table):
+def makeTables(b_start, b_stop, s_start, e_start, cat_table):
     '''
-    This function plots baseline-normalized plots for a given condition that include both all of the channels passing a filters and all the mean of those channels
+    Makes tables of the baseline portion, stimulated portion and the end portion (i.e. the part of the time course that you deem to have adapted) from the table of the whole time course
     '''
 
-    c = cat_table.query(condition_setting)
+    baseline_table = cat_table.query('time < "%s"'%b_stop).query('time > "%s"'%b_start)
+    stim_table = cat_table.query('time > "%s"'%s_start)
+    end_table = cat_table.query('time > "%s"'%e_start)
+    return(baseline_table, stim_table, end_table)
+
+
+
+def foldInductionPlusMean_stim(cat_table, baseline_table, stim_table, condition, title, var=2.5, minHz = 0.01):
+    '''
+    This function plots baseline-normalized plots for a given condition that include both all of the channels passing a filters and all the mean of those channels--use for stimulated samples b/c 
+    filters out things that don't change with stim
+    '''
+    c = cat_table.query('condition == "%s"'%condition)
+    b = baseline_table.query('condition == "%s"'%condition)
+    s = stim_table.query('condition == "%s"'%condition)
     c_filter = pd.DataFrame()
+    b_filter = pd.DataFrame()
+
 
     for unit_name in c['unit_name'].unique():
         unit = c.query('unit_name == @unit_name')
-        meanOfUnit = np.mean(unit[120:baseline_end]['spike_freq'])
-        varOfBaseline = np.var(unit[0:baseline_end]['spike_freq'])
-        meanAfterDrug = np.mean(unit[baseline_end+1:len(unit['spike_freq'])]['spike_freq'])
-        if meanOfUnit > 0.01 and varOfBaseline < 0.05 and meanAfterDrug/meanOfUnit > 0.25: #filter out some channels
-            plt.plot(unit['time'], unit['spike_freq']/meanOfUnit, color=(random.random(), random.random(), random.random(), .4))
+        unit_b = b.query('unit_name == @unit_name')
+        unit_s = s.query('unit_name == @unit_name')
+        meanOfBaseline = np.mean(unit_b['spike_freq'])
+        varOfBaseline = (max(unit_b['spike_freq'])-min(unit_b['spike_freq']))/meanOfBaseline
+        meanAfterDrug = np.mean(unit_s[0:60]['spike_freq'])
+        if meanOfBaseline < meanAfterDrug and varOfBaseline < var and meanOfBaseline > minHz: 
+            plt.plot(unit['time'], unit['spike_freq']/meanOfBaseline, color=(random.random(), random.random(), random.random(), .4))
             c_filter = c_filter.append(unit, ignore_index=True)
+            b_filter = b_filter.append(unit_b, ignore_index=True)
         else:
             continue
+
+
     plt.ylabel('Fold Inudction of Spike Frequency (Hz)')
-    plt.ylim(0,7)
+    plt.ylim(0,10)
     plt.axhline(y=1, xmin=0, xmax=1, hold=None, color='black')
     mean_freq_traces = c_filter.groupby(('condition', 'time'))['spike_freq'].mean()
     mean_freq_traces = mean_freq_traces.rename('spike frequency').reset_index() # Convert the multiindexed series back to a dataframe
+    mean_freq_traces_b = b_filter.groupby(('condition', 'time'))['spike_freq'].mean()
+    mean_freq_traces_b = mean_freq_traces_b.rename('spike frequency').reset_index() # Convert the multiindexed series back to a dataframe
+
     plt.title(title)
-    meanOfMean = np.mean(mean_freq_traces[0:1208]['spike frequency'])
+    meanOfMean = np.mean(mean_freq_traces_b['spike frequency'])
     plt.plot(mean_freq_traces['time'], mean_freq_traces['spike frequency']/meanOfMean, color=(0,0,0))
 
     plt.show()
+
+def foldInductionPlusMean_ctrl(cat_table, baseline_table, condition, title, var=2.5, minHz = 0.01):
+    '''
+    This function plots baseline-normalized plots for a given condition that include both all of the channels passing a filters and all the mean of those channels--use for unstim samples
+    '''
+    c = cat_table.query('condition == "%s"'%condition)
+    b = baseline_table.query('condition == "%s"'%condition)
+    c_filter = pd.DataFrame()
+    b_filter = pd.DataFrame()
+
+
+    for unit_name in c['unit_name'].unique():
+        unit = c.query('unit_name == @unit_name')
+        unit_b = b.query('unit_name == @unit_name')
+        unit_s = s.query('unit_name == @unit_name')
+        meanOfBaseline = np.mean(unit_b['spike_freq'])
+        varOfBaseline = (max(unit_b['spike_freq'])-min(unit_b['spike_freq']))/meanOfBaseline
+        if varOfBaseline < var and meanOfBaseline > minHz: 
+            plt.plot(unit['time'], unit['spike_freq']/meanOfBaseline, color=(random.random(), random.random(), random.random(), .4))
+            c_filter = c_filter.append(unit, ignore_index=True)
+            b_filter = b_filter.append(unit_b, ignore_index=True)
+        else:
+            continue
+
+
+    plt.ylabel('Fold Inudction of Spike Frequency (Hz)')
+    plt.ylim(0,10)
+    plt.axhline(y=1, xmin=0, xmax=1, hold=None, color='black')
+    mean_freq_traces = c_filter.groupby(('condition', 'time'))['spike_freq'].mean()
+    mean_freq_traces = mean_freq_traces.rename('spike frequency').reset_index() # Convert the multiindexed series back to a dataframe
+    mean_freq_traces_b = b_filter.groupby(('condition', 'time'))['spike_freq'].mean()
+    mean_freq_traces_b = mean_freq_traces_b.rename('spike frequency').reset_index() # Convert the multiindexed series back to a dataframe
+
+    plt.title(title)
+    meanOfMean = np.mean(mean_freq_traces_b['spike frequency'])
+    plt.plot(mean_freq_traces['time'], mean_freq_traces['spike frequency']/meanOfMean, color=(0,0,0))
+
+    plt.show()
+
+def foldInductionPlusMean(cat_table, baseline_table, stim_table, condition, title, var=2.5, minHz = 0.01, ind_filter = True):
+    '''
+    Combine stim and ctrl fxns
+    '''
+    
+    if ind_filter:
+        foldInductionPlusMean_stim(cat_table, baseline_table, stim_table, condition, title, var=2.5, minHz=0.01)
+    else:
+        foldInductionPlusMean_ctrl(cat_table, baseline_table, condition, title, var=2.5, minHz=0.01)
+
+
