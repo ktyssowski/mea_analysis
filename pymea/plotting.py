@@ -172,12 +172,13 @@ def foldInductionPlusMean_stim(cat_table, baseline_table, stim_table, condition,
 
     plt.show()
 
-def foldInductionPlusMean_ctrl(cat_table, baseline_table, condition, title, var=2.5, minHz = 0.01):
+def foldInductionPlusMean_ctrl(cat_table, baseline_table, stim_table, condition, title, var=2.5, minHz = 0.01):
     '''
     This function plots baseline-normalized plots for a given condition that include both all of the channels passing a filters and all the mean of those channels--use for unstim samples
     '''
     c = cat_table.query('condition == "%s"'%condition)
     b = baseline_table.query('condition == "%s"'%condition)
+    s = stim_table.query('condition == "%s"'%condition)
     c_filter = pd.DataFrame()
     b_filter = pd.DataFrame()
 
@@ -196,7 +197,7 @@ def foldInductionPlusMean_ctrl(cat_table, baseline_table, condition, title, var=
             continue
 
 
-    plt.ylabel('Fold Inudction of Spike Frequency (Hz)')
+    plt.ylabel('Fold Induction of Spike Frequency (Hz)')
     plt.ylim(0,10)
     plt.axhline(y=1, xmin=0, xmax=1, hold=None, color='black')
     mean_freq_traces = c_filter.groupby(('condition', 'time'))['spike_freq'].mean()
@@ -218,6 +219,6 @@ def foldInductionPlusMean(cat_table, baseline_table, stim_table, condition, titl
     if ind_filter:
         foldInductionPlusMean_stim(cat_table, baseline_table, stim_table, condition, title, var=2.5, minHz=0.01)
     else:
-        foldInductionPlusMean_ctrl(cat_table, baseline_table, condition, title, var=2.5, minHz=0.01)
+        foldInductionPlusMean_ctrl(cat_table, baseline_table, stim_table, condition, title, var=2.5, minHz=0.01)
 
 
