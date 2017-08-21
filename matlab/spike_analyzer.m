@@ -22,7 +22,7 @@ function varargout = spike_analyzer(varargin)
 
 % Edit the above text to modify the response to help spike_analyzer
 
-% Last Modified by GUIDE v2.5 21-Mar-2017 15:46:12
+% Last Modified by GUIDE v2.5 17-Jul-2017 16:34:36
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -84,9 +84,9 @@ function handles = load_data(handles)
     handles.mat_path = get_mat_path();
     handles.spike_paths = get_spike_paths();
     handles.axis_loader = AxisLoader(handles.spike_paths);
-    data_struct = load(handles.mat_path, 'electrode_containers');
     final_spike_time = load(handles.mat_path, 'final_spike_time');
     recording_start_time = load(handles.mat_path, 'recording_start_time');
+    data_struct = load(handles.mat_path, 'electrode_containers');
     handles.electrode_containers = data_struct.electrode_containers;
     handles.final_spike_time = final_spike_time.final_spike_time;
     handles.recording_start_time = recording_start_time.recording_start_time;
@@ -258,6 +258,55 @@ function handles = set_n_clust(handles, n_clust)
         disp(['Number of clusters must be between 0 and ', num2str(max_clusters), '!'])
     end
 
+function handles = merge_clusters(handles, merging_clusters)
+%
+%   Merges clusters specified by user
+
+    clust_nums = find(merging_clusters == 1); % Cluster numbers that are merging
+    if ~isempty(clust_nums)
+        num_merging = length(clust_nums); % How many clusters are merging?
+        new_n_clusters = handles.curr_container.n_clusters - num_merging + 1; % How many clusters will there be now?
+        merge_to = clust_nums(1);
+        merge_from = handles.curr_container.n_clusters; % Number of clusters before merging
+        all_nums = handles.curr_container.class_no{merge_from};
+        % Change the class_no of merging clusters
+        for i = 2:num_merging 
+            change_inds = find(all_nums == clust_nums(i));
+            for j = change_inds
+                all_nums(j) = merge_to;
+            end
+        end
+        % Check that class_no doesn't skip cluster numbers now (cluster numbers
+        % should go 1:new_n_clusters)
+        if max(all_nums) > new_n_clusters
+            kept_nos = unique(all_nums); % Finds which cluster numbers are still stored
+            removed_nos = clust_nums(2:end); % Cluster numbers that were removed in merge
+            over_kept = kept_nos(kept_nos > new_n_clusters); % Finds kept class_nos higher than max class_no
+            under_rem = removed_nos(removed_nos <= new_n_clusters); % Finds removed class_nos that need to be replaced
+            replace = find(all_nums > new_n_clusters);
+            for i = 1:length(replace)
+                replace_ind = replace(i);
+                replace_with = find(over_kept == all_nums(replace_ind));
+                all_nums(replace_ind) = under_rem(replace_with);
+            end
+        end    
+        % Update handles, saving the old unmerged class_no in cell 6 of
+        % handles.curr_container.class_no
+        handles.curr_container.class_no{6} = handles.curr_container.class_no{new_n_clusters};
+        handles.curr_container.class_no{new_n_clusters} = all_nums;
+        handles.curr_container.n_clusters = new_n_clusters;
+    end
+
+function handles = undo_merge(handles)
+%
+%   Returns to original clustering determined during preprocessing
+    if max(handles.curr_container.class_no{6}) == handles.curr_container.n_clusters
+        handles.curr_container.class_no{handles.curr_container.n_clusters} = handles.curr_container.class_no{6};
+        handles.curr_container.class_no{6} = [];
+    else
+        disp('No clusters were merged on this plot');
+    end
+
 function print_details(handles)
     %% TODO
     disp(handles.curr_container)
@@ -321,6 +370,16 @@ function handles = analysis_loop(handles)
                     axes(handles.secondary_axes)
                     handles = plot_spike_means(handles);
                 end
+                handles = refresh_colors(handles);
+            case 'm'
+                % Select clusters to be merged
+                merging_clusters = sel_clust_popup(handles);
+                % Merge clusters
+                handles = merge_clusters(handles, merging_clusters);
+                handles = refresh_colors(handles);
+            case 'u'
+                % Undo merge
+                handles = undo_merge(handles);
                 handles = refresh_colors(handles);
             case 'd'
                 print_details(handles);
