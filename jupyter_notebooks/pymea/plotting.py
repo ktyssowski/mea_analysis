@@ -5,7 +5,7 @@ import numpy as np
 from pymea import matlab_compatibility as mc
 from matplotlib import pyplot as plt
 import random
-
+from datetime import datetime
 
 def plot_units_from_spike_table(spike_table):
     time_vector = spike_table['time'].map(mc.datetime_str_to_datetime)
@@ -52,7 +52,28 @@ def plot_unit_traces_plus_means(category_dataframe, **plot_kwargs):
         condition_trace = mean_freq_traces.query('condition == @condition')
         plt.plot(condition_trace['time'], condition_trace['spike frequency'], 'k')
 
-    plt.yscale('log')
+    #plt.yscale('log')
+    plt.xlabel('time')
+    plt.ylabel('spike frequency')
+    plt.title('Spike Frequency Traces')
+    plt.legend(mean_freq_traces['condition'].unique()) 
+
+def plot_unit_traces_plus_medians(category_dataframe, yscale = 'linear', **plot_kwargs):
+    """
+    Plots spike frequency unit traces for each neural unit in the provided category dataframe, along with 
+    the mean trace (in black)
+    """
+    for unit in category_dataframe['unit_name'].unique():
+        unit_table = category_dataframe.query('unit_name == @unit')
+        plt.plot(unit_table['time'], unit_table['spike_freq'], **plot_kwargs)
+    
+    mean_freq_traces = category_dataframe.groupby(('condition', 'time'))['spike_freq'].median()
+    mean_freq_traces = mean_freq_traces.rename('spike frequency').reset_index() # Convert the multiindexed series back to a dataframe
+    for condition in mean_freq_traces['condition'].unique():
+        condition_trace = mean_freq_traces.query('condition == @condition')
+        plt.plot(condition_trace['time'], condition_trace['spike frequency'], 'k')
+
+    plt.yscale(yscale)
     plt.xlabel('time')
     plt.ylabel('spike frequency')
     plt.title('Spike Frequency Traces')
@@ -121,8 +142,50 @@ def plot_mean_frequency_traces(category_dataframe, **kwargs):
     plt.ylabel('spike frequency')
     plt.title('Mean Spike Frequency Traces')
     plt.legend(mean_freq_traces['condition'].unique())
+    
+def plot_median_frequency_traces(category_dataframe, yscale = 'linear', **kwargs):
+    """
+    Plots the mean frequency trace for each condition in category_dataframe
+    """
+    mean_freq_traces = category_dataframe.groupby(('condition', 'time'))['spike_freq'].median()
+    mean_freq_traces = mean_freq_traces.rename('spike frequency').reset_index() # Convert the multiindexed series back to a dataframe
+    for condition in mean_freq_traces['condition'].unique():
+        condition_trace = mean_freq_traces.query('condition == @condition')
+        plt.plot(condition_trace['time'], condition_trace['spike frequency'])
 
-def plot_unit_means_per_rec(category_dataframe, rec_starts, rec_ends, num_rec, **plot_kwargs):
+    plt.yscale(yscale)
+    plt.xlabel('time')
+    plt.ylabel('spike frequency')
+    plt.title('Median Spike Frequency Traces')
+    plt.legend(mean_freq_traces['condition'].unique())
+    
+def plot_median_unit_frequency_traces(category_dataframe, rec_starts, rec_ends, num_rec, yscale = 'linear', **kwargs):
+    """
+    Plots the frequency trace of the unit with the median avg spike freq for each condition in category_dataframe
+    """
+    overall_mean_freq = category_dataframe.groupby(('unit_name', 'condition'))['spike_freq'].mean()
+    overall_mean_freq = overall_mean_freq.rename('spike_freq').reset_index() # Convert the multiindexed series back to a dataframe
+    for condition in overall_mean_freq['condition'].unique():
+        condition_trace = overall_mean_freq.query('condition == @condition')
+        n = len(condition_trace['spike_freq'])
+        if n%2 == 0:
+            sorted_freq = sorted(condition_trace['spike_freq'])
+            median_freq = sorted_freq[n//2 - 1]
+        else:
+            median_freq = np.median(condition_trace['spike_freq'])
+        median_unit = condition_trace[condition_trace.spike_freq == median_freq]['unit_name']
+        median_unit.reset_index(drop=True, inplace = True)
+        median_unit = median_unit.iloc[0]
+        median_trace = category_dataframe.query('unit_name == @median_unit')
+        plot_unit_means_per_rec(median_trace, rec_starts, rec_ends, num_rec)
+        
+    plt.yscale(yscale)
+    plt.xlabel('time')
+    plt.ylabel('spike frequency')
+    plt.title('Median Unit Spike Frequency Traces')
+    plt.legend(overall_mean_freq['condition'].unique())
+
+def plot_unit_means_per_rec(category_dataframe, rec_starts, rec_ends, num_rec, yscale = 'linear', **plot_kwargs):
         mean_unit_freq = pd.DataFrame()
         for index in range(0,num_rec):
             start1 = rec_starts[index]
@@ -142,10 +205,36 @@ def plot_unit_means_per_rec(category_dataframe, rec_starts, rec_ends, num_rec, *
             date_table = mean_unit_freq.query('unit_name == @unit')
             plt.plot_date(date_table['start_time'], date_table['mean_freq'], '-o')
         
-        plt.yscale('log')
+        plt.yscale(yscale)
         plt.xlabel('time')
         plt.ylabel('mean spike frequency')
         plt.title('Mean Spike Frequency Per Recording')
+        
+def plot_medians_per_rec(category_dataframe, rec_starts, rec_ends, num_rec, yscale='linear', **plot_kwargs):
+        median_unit_freq = pd.DataFrame()
+        for index in range(0,num_rec):
+            start1 = rec_starts[index]
+            end1 = rec_ends[index]
+            rec_table = category_dataframe.query('time >= @start1 and time <= @end1')
+            rec_median_unit_freq = rec_table.groupby('condition')['spike_freq'].median()
+            num_units = rec_median_unit_freq.count()
+            start_dt = datetime.strptime(start1, "%Y-%m-%d %H:%M:%S").date()
+            start_times = pd.Series([start1]*num_units, index = rec_median_unit_freq.index)
+            rec_data = pd.DataFrame({"median_freq": rec_median_unit_freq, "start_time": start_times})
+            del rec_data.index.name
+            rec_data.reset_index()
+            rec_data['condition'] = rec_median_unit_freq.index
+            median_unit_freq = pd.concat([median_unit_freq, rec_data])
+        
+        for cond in median_unit_freq['condition'].unique():
+            date_table = median_unit_freq.query('condition == @cond')
+            plt.plot_date(date_table['start_time'], date_table['median_freq'], '-o')
+        
+        plt.yscale(yscale)
+        plt.xlabel('time')
+        plt.ylabel('median spike frequency')
+        plt.title('Median Spike Frequency Per Recording')
+        plt.legend(median_unit_freq['condition'].unique())
     
 def construct_categorized_dataframe(data_table, filter_dict):
     """
@@ -339,3 +428,58 @@ def count_active_neurons(cat_table, threshold, return_value):
     plt.title('Active units')
     if return_value:
         return time_grouped_counts
+    
+def compare_active_per_recording(cat_table, threshold, rec_starts, rec_ends):
+    """For each recording session, find the number of new neurons and the 
+    number of neurons that have stopped firing"""
+    above_threshold = cat_table.query('spike_freq > @threshold')
+    num_rec = len(rec_starts)
+    only_1 = [0]*(num_rec-1);
+    only_2 = [0]*(num_rec-1);
+    for index in range(0,num_rec-1):
+        start1 = rec_starts[index]
+        end1 = rec_ends[index]
+        start2 = rec_starts[index+1]
+        end2 = rec_ends[index+1]
+        group_1 = above_threshold.query('time >= @start1 and time <= @end1')
+        group_2 = above_threshold.query('time >= @start2 and time <= @end2')
+        units_1 = group_1['unit_name'].unique()
+        units_2 = group_2['unit_name'].unique()
+        both = list(set(units_1) | set(units_2))
+        only_1[index] = len(both) - len(units_2) #Count the number of units in group1 but not group2
+        only_2[index] = len(both) - len(units_1) 
+   
+    rec_starts_series = pd.Series(rec_starts)
+    recs = rec_starts_series.map(mc.remapped_str_to_datetime)
+    plt.plot_date(recs[1:15], only_2, '-', label = "new")
+    plt.plot_date(recs[1:15], only_1, '-', label = "died")
+    plt.legend()
+    plt.xlabel('Recording session')
+    plt.ylabel('Number of units')
+    plt.title('Neuron turnover')
+    
+def compare_active_per_sec(cat_table, threshold):
+    """For each recording session, find the number of new neurons and the 
+    number of neurons that have stopped firing"""
+    above_threshold = cat_table.query('spike_freq > @threshold').reset_index()
+    secs = above_threshold['time']
+    num_sec = len(secs)
+    only_1 = [0]*(num_sec-1);
+    only_2 = [0]*(num_sec-1);
+    for index in range(0,num_sec-1):
+        start1 = secs.iloc[index]
+        start2 = secs.iloc[index+1]
+        group_1 = above_threshold.query('time == @start1')
+        group_2 = above_threshold.query('time == @start2')
+        units_1 = group_1['unit_name'].unique()
+        units_2 = group_2['unit_name'].unique()
+        both = list(set(units_1) | set(units_2))
+        only_1[index] = len(both) - len(units_2) #Count the number of units in group1 but not group2
+        only_2[index] = len(both) - len(units_1) 
+   
+    plt.plot_date(secs.iloc[0:num_sec-1], only_2, '-', label = "new")
+    plt.plot_date(secs.iloc[0:num_sec-1], only_1, '-', label = "died")
+    plt.legend()
+    plt.xlabel('Recording session')
+    plt.ylabel('Number of units')
+    plt.title('Neuron turnover')
