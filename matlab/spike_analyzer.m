@@ -155,7 +155,7 @@ function handles = plot_features(handles)
 %% plot_features(container)
 %
 % Creates a 3d scatter plot of the data in pc space
-    features = handles.curr_container.features.pc_scores(handles.sample_spikes, :); 
+    features = handles.curr_container.features.pc_scores(handles.sample_spikes, :);
     handles.scatter_handle = scatter3(features(:, 1), features(:, 2), features(:, 3), 'filled');
     labels = arrayfun(@num2str, 1:handles.curr_container.n_clusters, 'UniformOutput', false);
     legend(labels)
@@ -197,8 +197,17 @@ function handles = refresh_colors(handles)
         end
     end
 
-    for i = 1:length(sample_classes)
-        c_data(i, :) = colors(sample_classes(i), :);
+    if handles.curr_container.n_clusters == 1
+        nspikes = size(handles.scatter_handle.XData,2);
+        blue = [0, 0, 1];
+        light = [203, 192, 255]/255;
+        c_gra = [linspace(blue(1),light(1),nspikes)', linspace(blue(2),light(2),nspikes)', linspace(blue(3),light(3),nspikes)'];
+        [~, sorted_indices] = sort(handles.curr_container.spike_times(handles.sample_spikes));
+        c_data = c_gra(sorted_indices,:);
+    else
+        for i = 1:length(sample_classes)
+            c_data(i, :) = colors(sample_classes(i), :);
+        end
     end
 
     if handles.plot_spike_means
@@ -353,6 +362,22 @@ function handles = prev_electrode(handles)
         disp_skip_msg(handles);
         handles = prev_electrode(handles);
     end
+    
+function handles = choose_electrode(handles)
+    chosen_index = sel_index_popup();
+    if chosen_index < numel(handles.electrode_containers) && chosen_index > 0
+        handles.curr_index = chosen_index;
+        if handles.electrode_containers(handles.curr_index).contains_data
+            handles = load_curr_container(handles);
+            disp_progress_msg(handles);
+        else
+            % this will overflow if all of the electrodes are empty
+            % fuck the police
+            disp_skip_msg(handles);
+        end
+    else
+        disp('Invalid electrode.')
+    end
 
 function [handles, keep_looping] = prompt_exit(handles)
     %% TODO
@@ -406,6 +431,10 @@ function handles = analysis_loop(handles)
                 handles = update_curr_container(handles);
                 handles = prev_electrode(handles);
                 handles = refresh_display(handles);
+            case 'g'
+                handles = update_curr_container(handles);
+                handles = choose_electrode(handles);
+                handles = refresh_display(handles);                
             case 's'
                 handles = update_curr_container(handles);
                 save_data(handles)
