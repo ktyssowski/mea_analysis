@@ -37,7 +37,7 @@ export PYTHONPATH="/path/to/mea_analysis/pymea:$PYTHONPATH"
 ```
 This has to be done each time you open up a new terminal. However, you can have the command run automatically by adding it to your `bashrc` like this:
 ```
-echo 'export PYTHONPATH="/path/to/mea_analysis/pymea:$PYTHONPATH"' >> ~/.bashrc
+echo 'export PYTHONPATH="/path/to/mea_analysis:$PYTHONPATH"' >> ~/.bashrc (use ~/.bash_profile for Mac OSX)
 ```
 Once you've done that, you should be able to import the pymea module into python after opening a new terminal.
 
