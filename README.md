@@ -33,7 +33,7 @@ pip install matplotlib numpy scipy pandas seaborn
 
 Once you have all of the dependencies installed, you have to add the pymea directory to your `PYTHONPATH`. To do this, you can run the following command:
 ```
-export PYTHONPATH="/path/to/mea_analysis/pymea:$PYTHONPATH"
+export PYTHONPATH="/path/to/mea_analysis:$PYTHONPATH"
 ```
 This has to be done each time you open up a new terminal. However, you can have the command run automatically by adding it to your `bashrc` like this:
 ```
