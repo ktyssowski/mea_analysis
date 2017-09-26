@@ -60,7 +60,9 @@ spike_table.time = [recording_start_time + seconds(bin_size):seconds(bin_size):f
 writetable(spike_table, output_path);
 
 % Save stim times if they exist
+
 if isfield(mat_data, 'stim_times')
-    stim_times = table(mat_data.stim_times', second(mat_data.stim_times)', 'VariableNames', {'date_time', 'seconds'});
+    stim_mat = [mat_data.stim_times];%; second(mat_data.stim_times)'];
+    stim_times = array2table(stim_mat, 'VariableNames', {'date_time'};%, 'seconds'});
     writetable(stim_times, 'stim_times.csv');
 end

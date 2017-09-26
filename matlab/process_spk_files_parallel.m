@@ -1,14 +1,28 @@
-function process_spk_files_parallel(spk_paths, output_path)
+function process_spk_files_parallel(spk_paths)
+c = parcluster;
+j = c.batch(@batch_process_spk_files_parallel, 0, {spk_paths,0}, 'Pool', 3);
+clock
+wait(j);
+diary(j);
+if string(j.State) == "finished"
+    j.fetchOutputs;
+else
+    disp(j.State);
+    failedjob = findJob(c, 'State', 'failed');
+    message = getDebugLog(c,failedjob(1))
+end
+delete(j);
+
+function batch_process_spk_files_parallel(spk_paths, filler_arg)
     %% process_spk_file(spk_paths, output_path)
     %
     % processes one or more 
-
+    
     if ~exist('output_path', 'var')
         [spk_dir, spk_name] = fileparts(spk_paths{1});
         output_path = fullfile(spk_dir, [spk_name, '.mat']);
         disp(['Output path not specified! Saving to ', output_path])
     end
-
     axis_loader = AxisLoader(spk_paths);
     output_file = matfile(output_path, 'Writable', true);
     cell_shape = axis_loader.get_cell_shape(); % The cell shape is dependent on the size of the plate
@@ -24,13 +38,19 @@ function process_spk_files_parallel(spk_paths, output_path)
     % We also need to store the timing of the last spike so that we can draw the x axis while plotting
     final_spike_time = datetime('1945-02-13 00:00:00');
 
-    % Load all datasets before parfor loop
-    %datasets = load_axis_datasets(spk_paths);%axis_loader.file_objs{1}.DataSets;
-    
     % Get the number of channels
     num_chan = axis_loader.num_channels;
     % Create empty datetime array to store max times from each electrode
-    last_spike_on_electrode_time = NaT(1,num_chan);%datetime([],[],[],[],[],[]);
+    last_spike_on_electrode_time = NaT(1,num_chan);
+    
+    % Get Stimulation Data, if it exists
+    stim_times = [];
+    for FileIndex = 1:length(axis_loader.file_objs)
+        FileData = axis_loader.file_objs{FileIndex};
+        evts = sort([FileData.StimulationEvents(:).EventTime]);
+        stim_times = [stim_times evts];
+    end
+        
     parfor i = 1:num_chan
         axis_loader_p = AxisLoader(spk_paths);
         channel = all_channels(i);
@@ -92,6 +112,7 @@ function process_spk_files_parallel(spk_paths, output_path)
     output_file.electrode_containers = electrode_containers;
     output_file.final_spike_time = final_spike_time;
     output_file.recording_start_time = axis_loader.recording_start_time;
+    output_file.stim_times = seconds(stim_times)+axis_loader.recording_start_time;
     
 function datasets = load_axis_datasets(filepaths)
     datasets = cell(size(filepaths));

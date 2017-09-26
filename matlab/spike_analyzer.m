@@ -86,10 +86,12 @@ function handles = load_data(handles)
     handles.axis_loader = AxisLoader(handles.spike_paths);
     final_spike_time = load(handles.mat_path, 'final_spike_time');
     recording_start_time = load(handles.mat_path, 'recording_start_time');
+    stim_times = load(handles.mat_path, 'stim_times');
     data_struct = load(handles.mat_path, 'electrode_containers');
     handles.electrode_containers = data_struct.electrode_containers;
     handles.final_spike_time = final_spike_time.final_spike_time;
     handles.recording_start_time = recording_start_time.recording_start_time;
+    handles.stim_times = stim_times.stim_times;
     handles.curr_index = 1;
     handles = load_curr_container(handles);
     if ~handles.curr_container.contains_data
@@ -133,7 +135,8 @@ function save_data(handles)
     electrode_containers = handles.electrode_containers;
     final_spike_time = handles.final_spike_time
     recording_start_time = handles.recording_start_time
-    save(handles.mat_path, 'electrode_containers', 'final_spike_time', 'recording_start_time', '-v7.3');
+    stim_times = handles.stim_times;
+    save(handles.mat_path, 'electrode_containers', 'final_spike_time', 'recording_start_time', 'stim_times', '-v7.3');
 
 %% --------------- DISPLAY ----------------%%
 
