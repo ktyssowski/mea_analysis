@@ -1,4 +1,5 @@
 from datetime import datetime
+from datetime import timedelta
 import pandas as pd
 
 def datetime_str_to_datetime(datetime_str):
@@ -53,3 +54,10 @@ def remapped_str_to_datetime(datetime_str):
     This converts the strings generated when a remapped cat_table is written to a table to python datetime objects
     """
     return datetime.strptime(datetime_str, '%Y-%m-%d %H:%M:%S')
+
+def create_stim_starts(stim_times):
+    '''Adds the date and seconds columns of the stim_times table, and returns a datetime series of the
+    stimulation tags'''
+    stim_times['date_time'] = stim_times['date_time'].map(datetime_str_to_datetime)
+    td=stim_times['seconds'].map(lambda x: timedelta(seconds = x))
+    return stim_times['date_time']+td
