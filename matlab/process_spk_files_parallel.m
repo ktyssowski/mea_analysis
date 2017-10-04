@@ -1,6 +1,6 @@
-function process_spk_files_parallel(spk_paths)
+function process_spk_files_parallel_fixed(spk_paths)
 c = parcluster;
-j = c.batch(@batch_process_spk_files_parallel, 0, {spk_paths,0}, 'Pool', 3);
+j = c.batch(@batch_process_spk_files_parallel, 0, {spk_paths,0}, 'Pool', 18);
 clock
 wait(j);
 diary(j);
