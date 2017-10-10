@@ -29,9 +29,6 @@ classdef AxisLoader < handle
             for i = 1:numel(obj.file_objs)
                 file_start_time = spike_time_to_datetime(obj.file_objs{i}.DataSets.Header.FileStartTime);
                 obj.recording_start_time = [obj.recording_start_time, file_start_time];
-                %min( ...
-                 %   [obj.recording_start_time, file_start_time] ...
-                );
             end
         end
         
