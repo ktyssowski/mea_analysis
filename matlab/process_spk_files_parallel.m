@@ -1,4 +1,4 @@
-function process_spk_files_parallel_fixed(spk_paths)
+function process_spk_files_parallel(spk_paths)
 c = parcluster;
 j = c.batch(@batch_process_spk_files_parallel, 0, {spk_paths,0}, 'Pool', 18);
 clock
@@ -47,8 +47,13 @@ function batch_process_spk_files_parallel(spk_paths, filler_arg)
     stim_times = [];
     for FileIndex = 1:length(axis_loader.file_objs)
         FileData = axis_loader.file_objs{FileIndex};
+        file_rec_start = FileData.DataSets.Header.FileStartTime;
+        file_start_dt = datetime(file_rec_start.Year, file_rec_start.Month, ...
+            file_rec_start.Day, file_rec_start.Hour, file_rec_start.Minute, ...
+            file_rec_start.Second, file_rec_start.Millisecond);
         evts = sort([FileData.StimulationEvents(:).EventTime]);
-        stim_times = [stim_times evts];
+        file_times = seconds(evts) + file_start_dt;
+        stim_times = [stim_times file_times];
     end
         
     parfor i = 1:num_chan
@@ -112,7 +117,7 @@ function batch_process_spk_files_parallel(spk_paths, filler_arg)
     output_file.electrode_containers = electrode_containers;
     output_file.final_spike_time = final_spike_time;
     output_file.recording_start_time = axis_loader.recording_start_time;
-    output_file.stim_times = seconds(stim_times)+axis_loader.recording_start_time;
+    output_file.stim_times = stim_times;
     
 function datasets = load_axis_datasets(filepaths)
     datasets = cell(size(filepaths));

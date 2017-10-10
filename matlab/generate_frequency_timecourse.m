@@ -22,7 +22,7 @@ parser = inputParser();
 parser.addRequired('spike_times', isdatetime);
 parser.addParameter('start_time', min(spike_times), isdatetime);
 parser.addParameter('end_time', max(spike_times), isdatetime);
-parser.addParameter('bin_size', 300, @isnumeric);
+parser.addParameter('bin_size', 60, @isnumeric);
 parser.parse(spike_times, varargin{:});
 
 start_time = parser.Results.start_time;
