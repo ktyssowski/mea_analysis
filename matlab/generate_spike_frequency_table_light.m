@@ -17,6 +17,7 @@ parser = inputParser();
 parser.addRequired('mat_path', is_file);
 parser.addRequired('output_path');
 parser.addParameter('bin_size', 60, @isnumeric);
+parser.addParameter('window', 0.150, @isnumeric);
 parser.parse(mat_path, output_path, varargin{:});
 
 mat_data = load( ...
@@ -28,6 +29,7 @@ mat_data = load( ...
 );
 
 bin_size = parser.Results.bin_size;
+window = parser.Results.window;
 electrode_containers = mat_data.electrode_containers;
 final_spike_time = mat_data.final_spike_time;
 recording_start_time = mat_data.recording_start_time;
@@ -49,7 +51,7 @@ for curr_container = containers_with_data(:)'
         unit_spike_times = curr_container.spike_times( ...
             curr_container.class_no{curr_container.n_clusters} == iClust ...
         );
-        unit_light_spikes = light_filter_spikes(unit_spike_times, stim_times);
+        unit_light_spikes = light_filter_spikes(unit_spike_times, stim_times, window);
         light_frequency_mat(:, curr_unit) = generate_frequency_timecourse( ...
             unit_light_spikes, ...
             'start_time', recording_start_time, ...
@@ -66,7 +68,7 @@ for curr_container = containers_with_data(:)'
     end
 end
 
-save('backup_arrays.mat', 'light_frequency_mat', 'frequency_mat');
+save('backup_arrays.mat', 'light_frequency_mat', 'frequency_mat', 'unit_names');
 
 light_spike_table = array2table(light_frequency_mat, 'VariableNames', unit_names);
 light_spike_table.time = [recording_start_time + seconds(bin_size):seconds(bin_size):final_spike_time]';
@@ -75,8 +77,8 @@ spike_table = array2table(frequency_mat, 'VariableNames', unit_names);
 spike_table.time = [recording_start_time + seconds(bin_size):seconds(bin_size):final_spike_time]';
 writetable(spike_table, output_path);
 
-function [filtered_spikes] = light_filter_spikes(unit_spike_times, stim_times)
-window = seconds(0.050);
+function [filtered_spikes] = light_filter_spikes(unit_spike_times, stim_times, window)
+window = seconds(window);
 filtered_spikes = [];
 for stim_start = stim_times
     pulse_spikes = unit_spike_times(unit_spike_times >= stim_start & ...

@@ -55,7 +55,7 @@ for curr_container = containers_with_data(:)'
     end
 end
 
-save('backup_mat_2.mat', 'frequency_mat', 'unit_names');
+%save('backup_mat_2.mat', 'frequency_mat', 'unit_names');
         
 spike_table = array2table(frequency_mat, 'VariableNames', unit_names);
 spike_table.time = [recording_start_time + seconds(bin_size):seconds(bin_size):final_spike_time]';
