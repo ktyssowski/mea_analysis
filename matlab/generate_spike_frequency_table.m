@@ -29,6 +29,7 @@ bin_size = parser.Results.bin_size;
 electrode_containers = mat_data.electrode_containers;
 final_spike_time = mat_data.final_spike_time;
 recording_start_time = mat_data.recording_start_time;
+recording_start_time = min(recording_start_time);
 
 % only work with the containers that actually have data
 containers_with_data = electrode_containers([electrode_containers(:).contains_data]);
