@@ -4,6 +4,7 @@ j = c.batch(@batch_process_spk_files_parallel, 0, {spk_paths,0}, 'Pool', 18);
 clock
 wait(j);
 diary(j);
+disp(j.State);
 if string(j.State) == "finished"
     j.fetchOutputs;
 else
@@ -17,7 +18,7 @@ function batch_process_spk_files_parallel(spk_paths, filler_arg)
     %% process_spk_file(spk_paths, output_path)
     %
     % processes one or more 
-    
+    disp('entered batch function');
     if ~exist('output_path', 'var')
         [spk_dir, spk_name] = fileparts(spk_paths{1});
         output_path = fullfile(spk_dir, [spk_name, '.mat']);
