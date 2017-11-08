@@ -9,8 +9,7 @@ function generate_spike_frequency_table_light(mat_path, output_path, varargin)
 % OPTIONS
 %
 % bin_size - size of the time bin (in seconds) to use when counting spikes. default = 60 seconds
-% window - size of time window (in seconds) to use for detecting light
-%    response. default = 0.050 ms
+% stim_space - number of milliseconds between light pulses. default = 500
 %
 % anon fcn to test for files
 is_file = @(fp) exist(fp, 'file');
@@ -19,8 +18,7 @@ parser = inputParser();
 parser.addRequired('mat_path', is_file);
 parser.addRequired('output_path');
 parser.addParameter('bin_size', 60, @isnumeric);
-parser.addParameter('window', 0.050, @isnumeric);
-parser.parse(mat_path, output_path, varargin{:});
+parser.addParameter('stim_space', 500, @isnumeric);
 
 mat_data = load( ...
     mat_path, ...
@@ -30,21 +28,28 @@ mat_data = load( ...
     'stim_times' ...
 );
 
+parser.addParameter('stim_start', min(mat_data.stim_times));
+parser.addParameter('stim_stop', max(mat_data.stim_times));
+parser.parse(mat_path, output_path, varargin{:});
+
+
 bin_size = parser.Results.bin_size;
-window = parser.Results.window;
+stim_space = parser.Results.stim_space;
 electrode_containers = mat_data.electrode_containers;
 final_spike_time = mat_data.final_spike_time;
 recording_start_time = mat_data.recording_start_time; %contains start time of each recording
 stim_times = mat_data.stim_times;
+stim_start = parser.Results.stim_start;
+stim_stop = parser.Results.stim_stop;
 
 % only work with the containers that actually have data
 containers_with_data = electrode_containers([electrode_containers(:).contains_data]);
 num_units = sum([containers_with_data(:).n_clusters]);
 num_bins = floor((final_spike_time - min(recording_start_time))/seconds(bin_size));
 
-pre_frequency_mat = zeros([num_bins, num_units]);
-light_frequency_mat = zeros([num_bins, num_units]);
 frequency_mat = zeros([num_bins, num_units]);
+stim_resp = zeros(num_units,1);
+autocorr = zeros(num_units,1);
 
 curr_unit = 1;
 unit_names = {};
@@ -55,19 +60,7 @@ for curr_container = containers_with_data(:)'
             curr_container.class_no{curr_container.n_clusters} == iClust ...
             );
         if ~isempty(stim_times)
-            [unit_pre_spikes, unit_light_spikes] = light_filter_spikes(unit_spike_times, stim_times, window);
-            pre_frequency_mat(:, curr_unit) = generate_frequency_timecourse( ...
-                unit_pre_spikes, ...
-                'start_time', min(recording_start_time), ...
-                'end_time', final_spike_time, ...
-                'bin_size', bin_size ...
-                );
-            light_frequency_mat(:, curr_unit) = generate_frequency_timecourse( ...
-                unit_light_spikes, ...
-                'start_time', min(recording_start_time), ...
-                'end_time', final_spike_time, ...
-                'bin_size', bin_size ...
-                );
+            [stim_resp(curr_unit), autocorr(curr_unit)] = check_responsive(unit_spike_times, stim_start, stim_stop, stim_space);
         end
         frequency_mat(:, curr_unit) = generate_frequency_timecourse( ...
             unit_spike_times, ...
@@ -79,31 +72,14 @@ for curr_container = containers_with_data(:)'
     end
 end
 
-save('backup_arrays.mat', 'pre_frequency_mat', 'light_frequency_mat', 'frequency_mat', 'unit_names', ...
-    'recording_start_time', 'bin_size');
+save('backup_arrays.mat', 'frequency_mat', 'unit_names', 'recording_start_time', 'bin_size', 'stim_resp', 'autocorr');
 
 % Convert matrices to tables with timing and save as csv
-if ~isempty(stim_times)
-    pre_spike_table = array2table(pre_frequency_mat, 'VariableNames', unit_names);
-    pre_spike_table.time = [min(recording_start_time) + seconds(bin_size):seconds(bin_size):final_spike_time]';
-    writetable(pre_spike_table, ['pre_' output_path]);
-    light_spike_table = array2table(light_frequency_mat, 'VariableNames', unit_names);
-    light_spike_table.time = [min(recording_start_time) + seconds(bin_size):seconds(bin_size):final_spike_time]';
-    writetable(light_spike_table, ['light_' output_path]);
-end
 spike_table = array2table(frequency_mat, 'VariableNames', unit_names);
 spike_table.time = [min(recording_start_time) + seconds(bin_size):seconds(bin_size):final_spike_time]';
 writetable(spike_table, output_path);
-
-function [pre_light_spikes, filtered_spikes] = light_filter_spikes(unit_spike_times, stim_times, window)
-window = seconds(window);
-pre_light_spikes = [];
-filtered_spikes = [];
-for stim_start = stim_times
-    pre_pulse_spikes = unit_spike_times(unit_spike_times >= (stim_start - window) & ...
-        unit_spike_times < stim_start);
-    pulse_spikes = unit_spike_times(unit_spike_times >= stim_start & ...
-        unit_spike_times <= (stim_start + window));
-    pre_light_spikes = [pre_light_spikes pre_pulse_spikes];
-    filtered_spikes = [filtered_spikes pulse_spikes];
+if ~isempty(stim_times)
+    resp_output_path = insertBefore(output_path, '.csv', '_resp_units');
+    resp_table = table(stim_resp, autocorr, 'VariableNames', {'unit_name', 'autocorr'});
+    writetable(resp_table, resp_output_path);
 end
