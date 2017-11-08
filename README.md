@@ -69,7 +69,7 @@ In O2: The first time you run matlab on O2, add the following to your bashrc:
 ```
 module load matlab/2017a
 ```
-To start a session:
+To start a session, run at the command line:
 ```
 srun --pty -p interactive -t 60:00 matlab
 ```
