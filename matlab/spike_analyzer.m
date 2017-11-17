@@ -91,7 +91,11 @@ function handles = load_data(handles)
     handles.electrode_containers = data_struct.electrode_containers;
     handles.final_spike_time = final_spike_time.final_spike_time;
     handles.recording_start_time = recording_start_time.recording_start_time;
-    handles.stim_times = stim_times.stim_times;
+    if isfield(stim_times, 'stim_times')
+        handles.stim_times = stim_times.stim_times;
+    else
+        handles.stim_times = [];
+    end
     handles.curr_index = 1;
     handles = load_curr_container(handles);
     if ~handles.curr_container.contains_data
@@ -368,7 +372,7 @@ function handles = prev_electrode(handles)
     
 function handles = choose_electrode(handles)
     chosen_index = sel_index_popup();
-    if chosen_index < numel(handles.electrode_containers) && chosen_index > 0
+    if ~isempty(chosen_index) && chosen_index < numel(handles.electrode_containers) && chosen_index > 0
         handles.curr_index = chosen_index;
         if handles.electrode_containers(handles.curr_index).contains_data
             handles = load_curr_container(handles);
@@ -377,6 +381,7 @@ function handles = choose_electrode(handles)
             % this will overflow if all of the electrodes are empty
             % fuck the police
             disp_skip_msg(handles);
+            %handles = next_electrode(handles);
         end
     else
         disp('Invalid electrode.')
