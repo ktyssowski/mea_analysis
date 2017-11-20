@@ -40,7 +40,6 @@ def get_row_col_number_tuple(unit_name):
     col_num = get_col_number(unit_name)
     return (row_num, col_num)
 
-
 def map_classic_to_lumos(cat_table, map_path, dest_path):
     mapping = pd.read_csv(map_path)
     for orig_str, new_str in zip(mapping['CytoView Well / Electrode'], mapping['48 Well Classic Well / Electrode']):
@@ -56,8 +55,31 @@ def remapped_str_to_datetime(datetime_str):
     return datetime.strptime(datetime_str, '%Y-%m-%d %H:%M:%S')
 
 def create_stim_starts(stim_times):
-    '''Adds the date and seconds columns of the stim_times table, and returns a datetime series of the
-    stimulation tags'''
+    """
+    Adds the date and seconds columns of the stim_times table, and returns a datetime series of the
+    stimulation tags
+    """
     stim_times['date_time'] = stim_times['date_time'].map(datetime_str_to_datetime)
     td=stim_times['seconds'].map(lambda x: timedelta(seconds = x))
     return stim_times['date_time']+td
+
+def get_well_number(unit_name):
+    """
+    Returns the well number corresponding to the unit specified by unit_name. "A1" is well 1, "B1" is well 2, "A2" is well 7,
+        etc.
+    """
+    (row, col) = get_row_col_number_tuple(unit_name)
+    return ((col - 1)*6 + row)
+
+def get_electrode_number(unit_name):
+    """
+    Returns the electrode number corresponding to the unit specified by unit_name. "A111" is electrode 1, "A121" is electrode 2, 
+        "A112" is electrode 5, "B111" is electrode 17, "A211" is electrode 97, etc.
+    """
+    well = get_well_number(unit_name)
+    return ((well-1)*16 + (int(unit_name[2])-1)*4 + int(unit_name[3]))
+
+def get_ele_row_col_number_tuple(unit_name):
+    row = int(unit_name[3])
+    col = int(unit_name[2])
+    return (row, col)

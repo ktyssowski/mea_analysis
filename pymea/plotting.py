@@ -6,7 +6,8 @@ from pymea import matlab_compatibility as mc
 from matplotlib import pyplot as plt
 from matplotlib import mlab as mlab
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
+import supplement_to_plotting as psupp
 
 def plot_units_from_spike_table(spike_table):
     time_vector = spike_table['time'].map(mc.datetime_str_to_datetime)
@@ -26,9 +27,6 @@ def smooth(A, kernel_size=5, mode='same'):
     """
     kernel = np.ones(kernel_size)/kernel_size
     return np.convolve(A, kernel, mode=mode)
-
-def plot_unit(time, unit):
-    plt.plot(time, unit)
 
 def plot_unit_traces(category_dataframe, **plot_kwargs):
     """
@@ -62,7 +60,7 @@ def plot_unit_traces_plus_means(category_dataframe, yscale = 'linear', light = F
         plt.plot(time_vector, condition_trace['spike frequency'], 'k')
 
     plt.yscale(yscale)
-    plt.xlabel('time')
+    plt.xlabel('Time (days)')
     plt.ylabel('spike frequency')
     plt.title('Spike Frequency Traces')
     plt.legend(mean_freq_traces['condition'].unique()) 
@@ -118,7 +116,6 @@ def plot_unit_points_plus_means(category_dataframe, title, divide_fn, **plot_kwa
     plt.xlabel('hours since start of 1st recording')
     plt.ylabel('spikes/pulse')
     plt.title(title)
-
 
 def average_timecourse_plot(category_dataframe, **kwargs):
     """
@@ -216,81 +213,90 @@ def plot_median_unit_frequency_traces(category_dataframe, rec_starts, rec_ends, 
     plt.legend(overall_mean_freq['condition'].unique())
 
 def plot_unit_means_per_rec(category_dataframe, rec_starts, rec_ends, num_rec, yscale = 'linear', **plot_kwargs):
-        mean_unit_freq = pd.DataFrame()
-        for index in range(0,num_rec):
-            start1 = rec_starts[index]
-            end1 = rec_ends[index]
-            rec_table = category_dataframe.query('time >= @start1 and time <= @end1')
-            rec_mean_unit_freq = rec_table.groupby('unit_name')['spike_freq'].mean()
-            num_units = rec_mean_unit_freq.count()
-            start_dt = datetime.strptime(start1, "%Y-%m-%d %H:%M:%S").date()
-            start_times = pd.Series([start1]*num_units, index = rec_mean_unit_freq.index)
-            rec_data = pd.DataFrame({"mean_freq": rec_mean_unit_freq, "start_time": start_times})
-            del rec_data.index.name
-            rec_data.reset_index()
-            rec_data['unit_name'] = rec_mean_unit_freq.index
-            mean_unit_freq = pd.concat([mean_unit_freq, rec_data])
+    """
+    Plots the mean firing of each unit per recording session
+    """
+    mean_unit_freq = pd.DataFrame()
+    for index in range(0,num_rec):
+        start1 = rec_starts[index]
+        end1 = rec_ends[index]
+        rec_table = category_dataframe.query('time >= @start1 and time <= @end1')
+        rec_mean_unit_freq = rec_table.groupby('unit_name')['spike_freq'].mean()
+        num_units = rec_mean_unit_freq.count()
+        start_dt = datetime.strptime(start1, "%Y-%m-%d %H:%M:%S").date()
+        start_times = pd.Series([start1]*num_units, index = rec_mean_unit_freq.index)
+        rec_data = pd.DataFrame({"mean_freq": rec_mean_unit_freq, "start_time": start_times})
+        del rec_data.index.name
+        rec_data.reset_index()
+        rec_data['unit_name'] = rec_mean_unit_freq.index
+        mean_unit_freq = pd.concat([mean_unit_freq, rec_data])
         
-        for unit in mean_unit_freq['unit_name'].unique():
-            date_table = mean_unit_freq.query('unit_name == @unit')
-            plt.plot_date(date_table['start_time'], date_table['mean_freq'], '-o')
+    for unit in mean_unit_freq['unit_name'].unique():
+        date_table = mean_unit_freq.query('unit_name == @unit')
+        plt.plot_date(date_table['start_time'], date_table['mean_freq'], '-o')
         
-        plt.yscale(yscale)
-        plt.xlabel('time')
-        plt.ylabel('mean spike frequency')
-        plt.title('Mean Spike Frequency Per Recording')
+    plt.yscale(yscale)
+    plt.xlabel('time')
+    plt.ylabel('mean spike frequency')
+    plt.title('Mean Spike Frequency Per Recording')
         
 def plot_means_per_rec(category_dataframe, rec_starts, rec_ends, num_rec, yscale = 'linear', **plot_kwargs):
-        mean_unit_freq = pd.DataFrame()
-        for index in range(0,num_rec):
-            start1 = rec_starts[index]
-            end1 = rec_ends[index]
-            rec_table = category_dataframe.query('time >= @start1 and time <= @end1')
-            rec_mean_unit_freq = rec_table.groupby('condition')['spike_freq'].mean()
-            num_units = rec_mean_unit_freq.count()
-            start_dt = datetime.strptime(start1, "%Y-%m-%d %H:%M:%S").date()
-            start_times = pd.Series([start1]*num_units, index = rec_mean_unit_freq.index)
-            rec_data = pd.DataFrame({"mean_freq": rec_mean_unit_freq, "start_time": start_times})
-            del rec_data.index.name
-            rec_data.reset_index()
-            rec_data['condition'] = rec_mean_unit_freq.index
-            mean_unit_freq = pd.concat([mean_unit_freq, rec_data])
+    """
+    Plots the mean firing of each condition per recording session
+    """
+    mean_unit_freq = pd.DataFrame()
+    for index in range(0,num_rec):
+        start1 = rec_starts[index]
+        end1 = rec_ends[index]
+        rec_table = category_dataframe.query('time >= @start1 and time <= @end1')
+        rec_mean_unit_freq = rec_table.groupby('condition')['spike_freq'].mean()
+        num_units = rec_mean_unit_freq.count()
+        start_dt = datetime.strptime(start1, "%Y-%m-%d %H:%M:%S").date()
+        start_times = pd.Series([start1]*num_units, index = rec_mean_unit_freq.index)
+        rec_data = pd.DataFrame({"mean_freq": rec_mean_unit_freq, "start_time": start_times})
+        del rec_data.index.name
+        rec_data.reset_index()
+        rec_data['condition'] = rec_mean_unit_freq.index
+        mean_unit_freq = pd.concat([mean_unit_freq, rec_data])
         
-        for cond in mean_unit_freq['condition'].unique():
-            date_table = mean_unit_freq.query('condition == @cond')
-            plt.plot_date(date_table['start_time'], date_table['mean_freq'], '-o')
+    for cond in mean_unit_freq['condition'].unique():
+        date_table = mean_unit_freq.query('condition == @cond')
+        plt.plot_date(date_table['start_time'], date_table['mean_freq'], '-o')
         
-        plt.yscale(yscale)
-        plt.xlabel('time')
-        plt.ylabel('mean spike frequency')
-        plt.title('Mean Spike Frequency Per Recording')
-        plt.legend(mean_unit_freq['condition'].unique())
+    plt.yscale(yscale)
+    plt.xlabel('time')
+    plt.ylabel('mean spike frequency')
+    plt.title('Mean Spike Frequency Per Recording')
+    plt.legend(mean_unit_freq['condition'].unique())
         
 def plot_medians_per_rec(category_dataframe, rec_starts, rec_ends, num_rec, yscale='linear', **plot_kwargs):
-        median_unit_freq = pd.DataFrame()
-        for index in range(0,num_rec):
-            start1 = rec_starts[index]
-            end1 = rec_ends[index]
-            rec_table = category_dataframe.query('time >= @start1 and time <= @end1')
-            rec_median_unit_freq = rec_table.groupby('condition')['spike_freq'].median()
-            num_units = rec_median_unit_freq.count()
-            start_dt = datetime.strptime(start1, "%Y-%m-%d %H:%M:%S").date()
-            start_times = pd.Series([start1]*num_units, index = rec_median_unit_freq.index)
-            rec_data = pd.DataFrame({"median_freq": rec_median_unit_freq, "start_time": start_times})
-            del rec_data.index.name
-            rec_data.reset_index()
-            rec_data['condition'] = rec_median_unit_freq.index
-            median_unit_freq = pd.concat([median_unit_freq, rec_data])
+    """
+    Plots the median firing of each condition per recording session
+    """
+    median_unit_freq = pd.DataFrame()
+    for index in range(0,num_rec):
+        start1 = rec_starts[index]
+        end1 = rec_ends[index]
+        rec_table = category_dataframe.query('time >= @start1 and time <= @end1')
+        rec_median_unit_freq = rec_table.groupby('condition')['spike_freq'].median()
+        num_units = rec_median_unit_freq.count()
+        start_dt = datetime.strptime(start1, "%Y-%m-%d %H:%M:%S").date()
+        start_times = pd.Series([start1]*num_units, index = rec_median_unit_freq.index)
+        rec_data = pd.DataFrame({"median_freq": rec_median_unit_freq, "start_time": start_times})
+        del rec_data.index.name
+        rec_data.reset_index()
+        rec_data['condition'] = rec_median_unit_freq.index
+        median_unit_freq = pd.concat([median_unit_freq, rec_data])
         
-        for cond in median_unit_freq['condition'].unique():
-            date_table = median_unit_freq.query('condition == @cond')
-            plt.plot_date(date_table['start_time'], date_table['median_freq'], '-o')
+    for cond in median_unit_freq['condition'].unique():
+        date_table = median_unit_freq.query('condition == @cond')
+        plt.plot_date(date_table['start_time'], date_table['median_freq'], '-o')
         
-        plt.yscale(yscale)
-        plt.xlabel('time')
-        plt.ylabel('median spike frequency')
-        plt.title('Median Spike Frequency Per Recording')
-        plt.legend(median_unit_freq['condition'].unique())
+    plt.yscale(yscale)
+    plt.xlabel('time')
+    plt.ylabel('median spike frequency')
+    plt.title('Median Spike Frequency Per Recording')
+    plt.legend(median_unit_freq['condition'].unique())
     
 def construct_categorized_dataframe(data_table, filter_dict):
     """
@@ -426,42 +432,24 @@ def makeTables(b_start, b_stop, s_start, e_start, cat_table):
 
 
 
-def foldInductionPlusMean_stim(cat_table, baseline_table, stim_table, condition, title, var=2.5, minHz = 0.01, maxHz = 100000, ymax = 10, plotFolds=True, foldMin = 0.001):
+def foldInductionPlusMean_stim(cat_table, baseline_table, stim_table, condition, title, var, minHz, maxHz, ymax, plotFolds, foldMin, y_scale, filter_wells):
     '''
-    This function plots baseline-normalized plots for a given condition that include both all of the channels passing a filters and all the mean of those channels--use for stimulated samples b/c 
-    filters out things that don't change with stim
+    This function plots baseline-normalized plots for a given condition that include both all of the channels passing a filters and all the mean(black)+median(red) of those channels--use for stimulated samples b/c filters out things that don't change with stim
     '''
     c = cat_table.query('condition == "%s"'%condition)
     b = baseline_table.query('condition == "%s"'%condition)
     s = stim_table.query('condition == "%s"'%condition)
-    c_filter = pd.DataFrame()
-    b_filter = pd.DataFrame()
     time_days = (cat_table['time']-cat_table['time'].iloc[0]).map(lambda x: x.days)
     time_seconds = (cat_table['time']-cat_table['time'].iloc[0]).map(lambda x: x.seconds)
     time_vector = (time_days + (time_seconds/3600/24)).unique()
-
-    for unit_name in c['unit_name'].unique():
-        unit = c.query('unit_name == @unit_name')
-        unit_b = b.query('unit_name == @unit_name')
-        unit_s = s.query('unit_name == @unit_name')
-        meanOfBaseline = np.mean(unit_b['spike_freq'])
-        varOfBaseline = (unit_b['spike_freq'].max() - unit_b['spike_freq'].min())/meanOfBaseline
-        meanAfterDrug = np.mean(unit_s[0:60]['spike_freq'])
-        folds = unit['spike_freq']/meanOfBaseline
-        if meanOfBaseline < meanAfterDrug and varOfBaseline < var and meanOfBaseline > minHz and meanOfBaseline < maxHz and not ((folds < foldMin).any()): 
-            if plotFolds == True:
-                plt.plot(time_vector, folds, color=(random.random(), random.random(), random.random(), .4))
-            else:
-                plt.plot(time_vector, unit['spike_freq'], color=(random.random(), random.random(), random.random(), .4))
-            c_filter = c_filter.append(unit, ignore_index=True)
-            b_filter = b_filter.append(unit_b, ignore_index=True)
-        else:
-            continue
-
-
+    
+    c_filter, b_filter, count_real, count_live, cf = psupp.filter_neurons_homeostasis(c, b, s, ind_filter=True, var=var, minHz=minHz, maxHz=maxHz, foldMin=foldMin, filter_wells=filter_wells)
+    
     plt.xlabel('Time (days)')
     plt.ylim(0.00005,ymax)
-
+    
+    #print(c_filter)
+        
     mean_freq_traces = c_filter.groupby(('condition', 'time'))['spike_freq'].mean()
     mean_freq_traces = mean_freq_traces.rename('spike frequency').reset_index() # Convert the multiindexed series back to a dataframe
     mean_freq_traces_b = b_filter.groupby(('condition', 'time'))['spike_freq'].mean()
@@ -471,6 +459,13 @@ def foldInductionPlusMean_stim(cat_table, baseline_table, stim_table, condition,
     median_freq_traces = median_freq_traces.rename('spike frequency').reset_index() # Convert the multiindexed series back to a dataframe
     median_freq_traces_b = b_filter.groupby(('condition', 'time'))['spike_freq'].median()
     median_freq_traces_b = median_freq_traces_b.rename('spike frequency').reset_index() # Convert the multiindexed series back to a dataframe
+    
+    for unit_name in c_filter['unit_name'].unique():
+        unit = c_filter.query('unit_name == @unit_name')
+        if plotFolds == True:
+            plt.plot(time_vector, unit['folds'], color=(random.random(), random.random(), random.random(), .4))
+        else:
+            plt.plot(time_vector, unit['spike_freq'], color=(random.random(), random.random(), random.random(), .4))
     
     plt.title(title)
     meanOfMean = np.mean(mean_freq_traces_b['spike frequency'])
@@ -485,42 +480,30 @@ def foldInductionPlusMean_stim(cat_table, baseline_table, stim_table, condition,
         plt.plot(time_vector, mean_freq_traces['spike frequency'], color=(0,0,0))
         plt.plot(time_vector, median_freq_traces['spike frequency'], 'r')      
         plt.ylabel('Spike Frequency (Hz)')
-    plt.yscale('log')
+    plt.yscale(y_scale)
 
     print(len(c_filter['unit_name'].unique()))
-    print(len(c['unit_name'].unique()))
+    print(count_live)
+    print(count_real)
+    print(len(c['unit_name'].unique()))   
     
     plt.show()
+    
+    return (c_filter['unit_name'].unique())
 
-def foldInductionPlusMean_ctrl(cat_table, baseline_table, stim_table, condition, title, var=2.5, minHz = 0.01, maxHz = 100000, ymax = 10, plotFolds=True, foldMin = 0.001):
+
+def foldInductionPlusMean_ctrl(cat_table, baseline_table, stim_table, condition, title, var, minHz, maxHz, ymax, plotFolds, foldMin, y_scale):
     '''
-    This function plots baseline-normalized plots for a given condition that include both all of the channels passing a filters and all the mean of those channels--use for unstim samples
+    This function plots baseline-normalized plots for a given condition that include both all of the channels passing a filters and all the mean(black)+median(red) of those channels--use for unstim samples
     '''
     c = cat_table.query('condition == "%s"'%condition)
     b = baseline_table.query('condition == "%s"'%condition)
     s = stim_table.query('condition == "%s"'%condition)
-    c_filter = pd.DataFrame()
-    b_filter = pd.DataFrame()
     time_days = (cat_table['time']-cat_table['time'].iloc[0]).map(lambda x: x.days)
     time_seconds = (cat_table['time']-cat_table['time'].iloc[0]).map(lambda x: x.seconds)
     time_vector = (time_days + (time_seconds/3600/24)).unique()
 
-    for unit_name in c['unit_name'].unique():
-        unit = c.query('unit_name == @unit_name')
-        unit_b = b.query('unit_name == @unit_name')
-        unit_s = s.query('unit_name == @unit_name')
-        meanOfBaseline = np.mean(unit_b['spike_freq'])
-        varOfBaseline = (unit_b['spike_freq'].max() - unit_b['spike_freq'].min())/meanOfBaseline
-        folds = unit['spike_freq']/meanOfBaseline
-        if varOfBaseline < var and meanOfBaseline > minHz and meanOfBaseline < maxHz and not ((folds < foldMin).any()): 
-            if plotFolds == True:
-                plt.plot(time_vector, folds, color=(random.random(), random.random(), random.random(), .4))
-            else:
-                plt.plot(time_vector, unit['spike_freq'], color=(random.random(), random.random(), random.random(), .4))
-            c_filter = c_filter.append(unit, ignore_index=True)
-            b_filter = b_filter.append(unit_b, ignore_index=True)
-        else:
-            continue
+    c_filter, b_filter, count_real, count_live, count_final = psupp.filter_neurons_homeostasis(c, b, s, ind_filter=False, var=var, minHz=minHz, maxHz=maxHz, foldMin=foldMin, filter_wells=False)
 
     mean_freq_traces = c_filter.groupby(('condition', 'time'))['spike_freq'].mean()
     mean_freq_traces = mean_freq_traces.rename('spike frequency').reset_index() # Convert the multiindexed series back to a dataframe
@@ -533,7 +516,14 @@ def foldInductionPlusMean_ctrl(cat_table, baseline_table, stim_table, condition,
     median_freq_traces_b = median_freq_traces_b.rename('spike frequency').reset_index() # Convert the multiindexed series back to a dataframe
     
     plt.xlabel('Time (days)')
-    plt.ylim(0.01,ymax)
+    plt.ylim(0.00005,ymax)
+    
+    for unit_name in c_filter['unit_name'].unique():
+        unit = c_filter.query('unit_name == @unit_name')
+        if plotFolds == True:
+            plt.plot(time_vector, unit['folds'], color=(random.random(), random.random(), random.random(), .4))
+        else:
+            plt.plot(time_vector, unit['spike_freq'], color=(random.random(), random.random(), random.random(), .4))
 
     plt.title(title)
     meanOfMean = np.mean(mean_freq_traces_b['spike frequency'])
@@ -549,35 +539,66 @@ def foldInductionPlusMean_ctrl(cat_table, baseline_table, stim_table, condition,
         plt.plot(time_vector, median_freq_traces['spike frequency'], 'r')
         plt.ylabel('Spike Frequency (Hz)')
 
-    plt.yscale('log')
+    plt.yscale(y_scale)
     
     print(len(c_filter['unit_name'].unique()))
+    print(count_real)
     print(len(c['unit_name'].unique()))
-    
-    plt.show()
 
-def foldInductionPlusMean(cat_table, baseline_table, stim_table, condition, title, var=2.5, minHz = 0.01, maxHz = 100000, ind_filter = True, ymax = 10, plotFolds = True, foldMin = 0.001):
+    plt.show()
+    
+    return (c_filter['unit_name'].unique())
+
+def foldInductionPlusMean(cat_table, baseline_table, stim_table, condition, title, var=10, minHz = 0.001, maxHz = 100, ind_filter = True, ymax = 10, plotFolds = True, foldMin = 0.001, y_scale = 'log', filter_wells = True):
     '''
     Combine stim and ctrl fxns
     '''
     if ind_filter:
-        foldInductionPlusMean_stim(cat_table, baseline_table, stim_table, condition, title, var, minHz, maxHz, ymax, plotFolds, foldMin)
+        filtered_units = foldInductionPlusMean_stim(cat_table, baseline_table, stim_table, condition, title, var, minHz, maxHz, ymax, plotFolds, foldMin, y_scale, filter_wells)
     else:
-        foldInductionPlusMean_ctrl(cat_table, baseline_table, stim_table, condition, title, var, minHz, maxHz, ymax, plotFolds, foldMin)
+        filtered_units = foldInductionPlusMean_ctrl(cat_table, baseline_table, stim_table, condition, title, var, minHz, maxHz, ymax, plotFolds, foldMin, y_scale)
+        
+    return filtered_units
 
 
-def count_active_neurons(cat_table, threshold, return_value):
+def count_active_neurons(cat_table, baseline_table = 0, stim_table = 0, threshold = 0.001, folds = 0, kill_neurons = 0, return_value = 0):
     '''
-    Count and plot the number of neurons firing above a threshold at each time point
+    Count and plot the number of neurons firing above a threshold at each time point. If folds == 1, a neuron is deemed firing
+    if its fold induction is greater than threshold. If kill_neurons == 1, a neuron is deemed dead for the rest of the
+    experiment as soon as its fold induction goes below threshold.
     '''
-    above_threshold = cat_table.query('spike_freq > @threshold')
+    time_days = (cat_table['time']-cat_table['time'].iloc[0]).map(lambda x: x.days)
+    time_seconds = (cat_table['time']-cat_table['time'].iloc[0]).map(lambda x: x.seconds)
+    time_vector = (time_days + (time_seconds/3600/24)).unique()
+    
+    if folds == 0:
+        count_table = cat_table
+        
+    elif folds == 1:
+        meanOfBaseline = baseline_table.groupby('unit_name')['spike_freq'].mean()
+        meanOfBaseline = meanOfBaseline.reset_index()
+        count_table = pd.DataFrame()
+        for unit in baseline_table['unit_name'].unique():
+            unit_table = cat_table.query('unit_name == @unit')
+            unit_mean_b = meanOfBaseline.query('unit_name == @unit')['spike_freq']
+            unit_mean_b = unit_mean_b.reset_index()
+            b = unit_mean_b.get_value(0,'spike_freq')
+            unit_table.loc[:,'spike_freq'] = unit_table['spike_freq']/b
+            below_fold_thresh = unit_table.query('spike_freq < @threshold')
+            if not below_fold_thresh.empty:
+                first_death = min(below_fold_thresh['time'])
+                unit_table.set_value((unit_table.loc[unit_table['time'] > first_death]).index, 'spike_freq', 0)
+                ccc=unit_table
+            count_table = pd.concat([count_table, unit_table])
+        
+    above_threshold = count_table.query('spike_freq > @threshold')
     time_grouped_counts = above_threshold.groupby(('time'))['unit_name'].count()
     time_grouped_counts = time_grouped_counts.rename('count').reset_index() # Convert the multiindexed series back to a dataframe
     
-    plt.plot(time_grouped_counts['time'], time_grouped_counts['count'])
+    plt.plot(time_vector, time_grouped_counts['count'])
     plt.xlabel('time')
     plt.ylabel('Number of active units')
-    plt.title('Active units')
+    plt.title(cat_table.get_value(0,'condition')[0])
     if return_value:
         return time_grouped_counts
     
@@ -638,26 +659,147 @@ def compare_active_per_sec(cat_table, threshold):
     plt.ylabel('Number of units')
     plt.title('Neuron turnover')
 
-def unit_mean_freq_hist(category_dataframe, num_bins = 50):
+def unit_mean_freq_hist(category_dataframe, num_bins = 50, plot = 'linear'):
     '''
     Plots histogram showing the distribution of mean firing rate of each unit in category_dataframe
     '''
     unit_freq_mean = category_dataframe.groupby(('unit_name'))['spike_freq'].mean()
-    unit_freq_mean = unit_freq_mean.rename('spike frequency').reset_index() # Convert the multiindexed series back to a dataframe
-    sigma = unit_freq_mean['spike frequency'].std()
-    mu = unit_freq_mean['spike frequency'].mean()
-    n, bins, patches = plt.hist(unit_freq_mean['spike frequency'], bins = num_bins)
+    unit_freq_mean = unit_freq_mean.rename('spike_freq').reset_index() # Convert the multiindexed series back to a dataframe
+    unit_freq_mean = unit_freq_mean.query('spike_freq > 0')
+    #sigma = unit_freq_mean['spike frequency'].std()
+    #mu = unit_freq_mean['spike frequency'].mean()
+    if plot == 'linear':
+        n, bins, patches = plt.hist(unit_freq_mean['spike_freq'], bins = num_bins)
+    elif plot == 'log':
+        n, bins, patches = plt.hist(np.log10(unit_freq_mean['spike_freq']), bins = num_bins)
+        
     # add a 'best fit' line
-    y = mlab.normpdf(bins, mu, sigma)
-    plt.plot(bins, y, 'r--')
+    #y = mlab.normpdf(bins, mu, sigma)
+    #plt.plot(bins, y, 'r--')
     plt.title('Mean Firing Rate per Unit')
 
-def select_neurons(cat_table, min_freq = 0, max_freq = 100000):
+def neurons_per_well(cat_table):
     '''
-    Returns a version of cat_table only containing units whose mean frequency is between min_freq and max_freq
+    Plots a bar plot of the number of active neurons per well
     '''
-    unit_freq_mean = cat_table.groupby(('unit_name'))['spike_freq'].mean()
-    unit_freq_mean = unit_freq_mean.rename('spike_freq').reset_index()
-    filt = (unit_freq_mean['spike_freq'] > min_freq) & (unit_freq_mean['spike_freq'] < max_freq)
-    selected_units = unit_freq_mean.loc[filt,'unit_name']
-    return (cat_table.loc[cat_table['unit_name'].isin(selected_units)], selected_units)
+    units = cat_table['unit_name'].unique()
+    wells = np.zeros(48)
+    ind = range(1,49)
+    for unit in units:
+        well = mc.get_well_number(unit)
+        wells[well-1] = wells[well-1]+1
+    barlist = plt.bar(ind,wells)
+    for i in range(0,6):
+        barlist[i].set_color('r')
+    for i in range(6,12):
+        barlist[i].set_color('b')
+    for i in range(12,18):
+        barlist[i].set_color('g')
+    for i in range(18,24):
+        barlist[i].set_color('y')
+    for i in range(24,30):
+        barlist[i].set_color('c')
+    for i in range(30,36):
+        barlist[i].set_color('k')
+    for i in range(36,42):
+        barlist[i].set_color('m')
+    plt.title('Neurons per Well')
+    plt.xlabel('Well Number')
+    plt.ylabel('Number of Neurons')
+
+def neurons_per_electrode(cat_table):
+    '''
+    Plots a bar plot of the number of active neurons per well
+    '''
+    units = cat_table['unit_name'].unique()
+    eles = np.zeros(768)
+    ind = range(1,769)
+    for unit in units:
+        ele = mc.get_electrode_number(unit)
+        eles[ele-1] = eles[ele-1]+1
+    barlist = plt.bar(ind,eles)
+    for i in range(0,96):
+        barlist[i].set_color('r')
+    for i in range(96,192):
+        barlist[i].set_color('b')
+    for i in range(192,288):
+        barlist[i].set_color('g')
+    for i in range(288,384):
+        barlist[i].set_color('y')
+    for i in range(384,480):
+        barlist[i].set_color('c')
+    for i in range(480,576):
+        barlist[i].set_color('k')
+    for i in range(576,672):
+        barlist[i].set_color('m')
+    plt.title('Neurons per Electrode')
+    plt.xlabel('Electrode Number')
+    plt.ylabel('Number of Neurons')
+
+def heatmap_active_wells(unit_names):
+    '''
+    Makes a heatmap comparing the number of active neurons per well
+    '''
+    wells = np.zeros((6,8))
+    for unit in unit_names:
+        row, col = mc.get_row_col_number_tuple(unit)
+        wells[row-1,col-1] = wells[row-1,col-1]+1
+    plt.imshow(wells)
+    plt.colorbar()
+
+def heatmap_active_electrodes(unit_names):
+    '''
+    Makes a heatmap comparing the number of active neurons per electrode
+    '''
+    electrodes = np.zeros((24, 32))
+    for unit in unit_names:
+        well_row, well_col = mc.get_row_col_number_tuple(unit)
+        ele = mc.get_electrode_number(unit)
+        row_in_well, col_in_well = mc.get_ele_row_col_number_tuple(unit)
+        ele_row = 4*(well_row-1) + row_in_well
+        ele_col = 4*(well_col-1) + col_in_well
+        ele_row = int(ele_row)
+        electrodes[ele_row-1, ele_col-1] = electrodes[ele_row-1, ele_col-1]+1
+    plt.imshow(electrodes)
+    plt.colorbar()
+    for xline in np.arange(-0.5,32,4):
+        plt.axvline(x = xline)
+    for yline in np.arange(-0.5,24,4):
+        plt.axhline(y=yline)
+        
+def cdf_foldInduction(b_filter, s_filter, title = ""):
+    '''
+    Plots the cumulative distribution function of the fold induction post baseline at various 
+    timepoints during a homeostasis experiment
+    '''
+    s_start = s_filter['time'].iloc[0]
+    hours = np.array([0, 1, 3, 6, 12, 24, 48, 72, 96, 120, 144, 168, 192])
+    max_hours = (max(s_filter['time']) - s_start).days*24 + (max(s_filter['time']) - s_start).seconds/3600
+    hours = hours[hours<= max_hours]
+    
+    color_idx = np.linspace(0.1, 1, 1+len(hours))
+    stim_color_ind = 1
+    
+    baseline_fold = b_filter.groupby(('unit_name'))['folds'].mean()
+    baseline_fold = baseline_fold.rename('folds').reset_index()
+    sort, p = psupp.cdf(baseline_fold['folds'])
+    plt.plot(sort, p, color=plt.cm.gist_yarg(0.07))
+    
+    for timepoint in hours:
+        period_start = s_start + timedelta(hours=timepoint)
+        period_stop = period_start + timedelta(hours=1)
+        s_period = s_filter.query('time > @period_start and time < @period_stop')
+        period_fold = s_period.groupby('unit_name')['folds'].mean()
+        period_fold = period_fold.rename('folds').reset_index()
+        sort, p = psupp.cdf(period_fold['folds'])
+        plt.plot(sort, p, color=plt.cm.gist_yarg(color_idx[stim_color_ind]))
+        stim_color_ind = stim_color_ind+1
+        
+    legend_labels = np.append("Baseline", hours)
+    plt.legend(legend_labels)
+    plt.xlabel('FR/baseline')
+    plt.ylabel('Fraction of Population')
+    plt.title('CDF ' + title)
+    
+    plt.xlim([0, 10])
+    plt.axhline(y=0.5, linestyle='--', color = 'k')
