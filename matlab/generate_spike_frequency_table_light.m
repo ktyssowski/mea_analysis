@@ -19,6 +19,7 @@ parser.addRequired('mat_path', is_file);
 parser.addRequired('output_path');
 parser.addParameter('bin_size', 60, @isnumeric);
 parser.addParameter('stim_space', 500, @isnumeric);
+parser.addParameter('light', 0);
 
 mat_data = load( ...
     mat_path, ...
@@ -29,7 +30,7 @@ mat_data = load( ...
 );
 
 parser.addParameter('stim_start', min(mat_data.stim_times));
-parser.addParameter('stim_stop', max(mat_data.stim_times));
+parser.addParameter('stim_stop', mat_data.final_spike_time);
 parser.parse(mat_path, output_path, varargin{:});
 
 
@@ -41,6 +42,7 @@ recording_start_time = mat_data.recording_start_time; %contains start time of ea
 stim_times = mat_data.stim_times;
 stim_start = parser.Results.stim_start;
 stim_stop = parser.Results.stim_stop;
+light = parser.Results.light;
 
 % only work with the containers that actually have data
 containers_with_data = electrode_containers([electrode_containers(:).contains_data]);
@@ -59,7 +61,7 @@ for curr_container = containers_with_data(:)'
         unit_spike_times = curr_container.spike_times( ...
             curr_container.class_no{curr_container.n_clusters} == iClust ...
             );
-        if ~isempty(stim_times)
+        if ~isempty(stim_times) && light == 1
             [stim_resp(curr_unit), autocorr(curr_unit)] = check_responsive(unit_spike_times, stim_start, stim_stop, stim_space);
         end
         frequency_mat(:, curr_unit) = generate_frequency_timecourse( ...
@@ -72,14 +74,15 @@ for curr_container = containers_with_data(:)'
     end
 end
 
-save('backup_arrays.mat', 'frequency_mat', 'unit_names', 'recording_start_time', 'bin_size', 'stim_resp', 'autocorr');
+save('backup_arrays.mat', 'frequency_mat', 'unit_names', 'recording_start_time', 'final_spike_time', ...
+    'bin_size', 'stim_resp', 'autocorr', 'output_path');
 
 % Convert matrices to tables with timing and save as csv
 spike_table = array2table(frequency_mat, 'VariableNames', unit_names);
 spike_table.time = [min(recording_start_time) + seconds(bin_size):seconds(bin_size):final_spike_time]';
 writetable(spike_table, output_path);
-if ~isempty(stim_times)
+if ~isempty(stim_times) && light == 1
     resp_output_path = insertBefore(output_path, '.csv', '_resp_units');
-    resp_table = table(stim_resp, autocorr, 'VariableNames', {'unit_name', 'autocorr'});
+    resp_table = table(unit_names', stim_resp, autocorr, 'VariableNames', {'unit_name', 'stim_resp', 'autocorr'});
     writetable(resp_table, resp_output_path);
 end
