@@ -381,7 +381,7 @@ function handles = choose_electrode(handles)
             % this will overflow if all of the electrodes are empty
             % fuck the police
             disp_skip_msg(handles);
-            %handles = next_electrode(handles);
+            handles = next_electrode(handles);
         end
     else
         disp('Invalid electrode.')
