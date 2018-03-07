@@ -3,6 +3,7 @@ c = parcluster;
 j = c.batch(@batch_process_spk_files_parallel, 0, {spk_paths,0}, 'Pool', 18);
 clock
 wait(j);
+clock
 diary(j);
 disp(j.State);
 if string(j.State) == "finished"
@@ -44,19 +45,8 @@ function batch_process_spk_files_parallel(spk_paths, filler_arg)
     % Create empty datetime array to store max times from each electrode
     last_spike_on_electrode_time = NaT(1,num_chan);
     
-    % Get Stimulation Data, if it exists
     stim_times = [];
-    for FileIndex = 1:length(axis_loader.file_objs)
-        FileData = axis_loader.file_objs{FileIndex};
-        file_rec_start = FileData.DataSets.Header.FileStartTime;
-        file_start_dt = datetime(file_rec_start.Year, file_rec_start.Month, ...
-            file_rec_start.Day, file_rec_start.Hour, file_rec_start.Minute, ...
-            file_rec_start.Second, file_rec_start.Millisecond);
-        evts = sort([FileData.StimulationEvents(:).EventTime]);
-        file_times = seconds(evts) + file_start_dt;
-        stim_times = [stim_times file_times];
-    end
-        
+
     parfor i = 1:num_chan
         axis_loader_p = AxisLoader(spk_paths);
         channel = all_channels(i);
@@ -98,7 +88,21 @@ function batch_process_spk_files_parallel(spk_paths, filler_arg)
                 'valid', false ...
             );
         end
+        % Get Stimulation Data, if it exists
+        if i <= length(axis_loader_p.file_objs)
+            FileData = axis_loader_p.file_objs{i};
+            file_rec_start = FileData.DataSets.Header.FileStartTime;
+            file_start_dt = datetime(file_rec_start.Year, file_rec_start.Month, ...
+                file_rec_start.Day, file_rec_start.Hour, file_rec_start.Minute, ...
+                file_rec_start.Second, file_rec_start.Millisecond);
+            evts = [FileData.StimulationEvents(:).EventTime];
+            file_times = seconds(evts) + file_start_dt;
+            stim_times = [stim_times file_times];
+        end
     end
+    
+    % Sort stim times
+    stim_times = sort(stim_times);
     
     % Update final spike time
     final_spike_time = max([final_spike_time, last_spike_on_electrode_time]);
