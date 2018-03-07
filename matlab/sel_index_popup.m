@@ -8,4 +8,4 @@ function chosen_index = sel_index_popup()
     else
         chosen_index = str2num(chosen_index{1});
     end
-    disp(['chose = ' chosen_index]);
+    disp(['chose = ' num2str(chosen_index)]);
