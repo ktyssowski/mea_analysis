@@ -10,7 +10,7 @@ function [response, ac] = check_responsive(all_times, start, stop, peak)
 
 dur = milliseconds(stop-start);
 in_window = all_times(isbetween(all_times, start, stop));
-times = zeros(1,int64(dur));
+times = zeros(1,ceil(dur));
 milli_times = milliseconds(in_window-start)+1;
 
 for spike = floor(milli_times)
