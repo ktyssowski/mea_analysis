@@ -57,6 +57,13 @@ for curr_container = containers_with_data(:)'
 end
 
 %save('backup_mat_2.mat', 'frequency_mat', 'unit_names');
+% Make sure there are no duplicate units
+[unique_units, ia] = unique(unit_names);
+if length(unique_units) ~= length(unit_names)
+    fm2 = frequency_mat(:, ia);
+    frequency_mat = fm2;
+    unit_names = unique_units;
+end
         
 spike_table = array2table(frequency_mat, 'VariableNames', unit_names);
 spike_table.time = [recording_start_time + seconds(bin_size):seconds(bin_size):final_spike_time]';
@@ -67,3 +74,13 @@ if isfield(mat_data, 'stim_times')
     stim_times = table(mat_data.stim_times', second(mat_data.stim_times)', 'VariableNames', {'date_time', 'seconds'});
     writetable(stim_times, 'stim_times.csv');
 end
+
+%% if encounter duplicate unit name issue:
+% Put breakpoint at 61: spike_table = array2table...
+%unique_units = unique(unit_names);
+%[unique_units, ia, ic] = unique(unit_names);
+%fm2 = frequency_mat(:, ia);
+%frequency_mat = fm2;
+%unit_names = unique_units;
+% Continue to save table.
+% 
