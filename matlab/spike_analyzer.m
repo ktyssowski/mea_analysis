@@ -173,9 +173,11 @@ function handles = plot_spikes(handles)
 %
     handles.spike_handles = cell(size(handles.sample_spikes));
     spikes = handles.curr_container.get_spikes();
+    spike_no_all = [];
     for i = 1:length(handles.sample_spikes)
         spike_no = handles.sample_spikes(i);
         handles.spike_handles{i} = plot(spikes(spike_no, :));
+        spike_no_all = [spike_no_all, spike_no];
         hold on
     end
     hold off

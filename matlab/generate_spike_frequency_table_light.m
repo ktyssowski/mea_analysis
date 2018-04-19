@@ -77,6 +77,14 @@ end
 save('backup_arrays.mat', 'frequency_mat', 'unit_names', 'recording_start_time', 'final_spike_time', ...
     'bin_size', 'stim_resp', 'autocorr', 'output_path');
 
+% Make sure there are no duplicate units
+[unique_units, ia] = unique(unit_names);
+if length(unique_units) ~= length(unit_names)
+    fm2 = frequency_mat(:, ia);
+    frequency_mat = fm2;
+    unit_names = unique_units;
+end
+
 % Convert matrices to tables with timing and save as csv
 spike_table = array2table(frequency_mat, 'VariableNames', unit_names);
 spike_table.time = [min(recording_start_time) + seconds(bin_size):seconds(bin_size):final_spike_time]';
