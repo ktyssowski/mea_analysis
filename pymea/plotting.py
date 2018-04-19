@@ -539,7 +539,7 @@ def foldInductionPlusMean_ctrl(cat_table, baseline_table, stim_table, condition,
     
     plt.show()
     
-    return (c_filter['unit_name'].unique(),time_vector_m)
+    return (c_filter['unit_name'].unique())
 
 def foldInductionPlusMean(cat_table, baseline_table, stim_table, condition, title, var=10, minHz = 0.001, maxHz = 100, ind_filter = True, ymax = 10, plotFolds = True, foldMin = 0.001, y_scale = 'log', filter_wells = True, data_col ='spike_freq'):
     '''
