@@ -57,14 +57,9 @@ Installing the Matlab code on Orchestra/O2
 ---------------------------------------
 You can follow the above instructions to install the code on Orchestra. However, to view the Matlab GUI, you need to use X11 forwarding on an interactive node. If you're running Linux, you're all set! On a mac, you'll need [XQuartz](https://www.xquartz.org/), if you're running windows, take a moment to reconsider your life's decisions, then download [XMing](https://sourceforge.net/projects/xming/). Next, all you have to do is use the `-X` modifier when initially connecting to Orchestra, then submit an interactive job to the interactive queue:
 ```
-Orchestra~$ ssh -X sr235@orchestra.med.harvard.edu
-O2~$ ssh -X sr235@login.rc.hms.harvard.edu 
+O2~$ ssh -X sr235@login.rc.hms.harvard.edu
 ```
 Once you're logged on...
-```
-Orchestra~$ bsub -q interactive -Is bash
-	    matlab
-```
 In O2: The first time you run matlab on O2, add the following to your bashrc:
 ```
 module load matlab/2017a
@@ -73,7 +68,7 @@ To start a session, run at the command line:
 ```
 srun --pty -p interactive -t 60:00 matlab
 ```
-On Orchestra you should see the matlab splash followed by the matlab GUI. On O2 there is no GUI and you will interact with matlab directly through the terminal window.
+On O2 there is no GUI and you will interact with matlab directly through the terminal window.
 
 Spike Sorting
 =============
@@ -81,29 +76,28 @@ Spike sorting consists of two stages, an automated preprocessing step involving 
 
 Preprocessing
 -------------
-Preprocessing is carried out by the `process_spk_files_parallel.m` matlab function. The function can be called from matlab by specifying a cell array containing the paths to the .spk files in a recording as the first argument, and the desired output .mat file path as the second argument:
+Preprocessing is carried out by the `process_spk_files_parallel.m` matlab function. The function can be called from matlab by specifying the amount of memory required for the job as the first argument, the amount of time required as the second argument, and finally a cell array containing the paths to the .spk files in a recording as the last argument:
 ```
-process_spk_files_parallel({'/path/to/spk_file_1.spk', '/path/to/spk_file_2.spk'}, '/path/to/output_file.mat'}
+process_spk_files_parallel(num_GB, reqTime, {'/path/to/spk_file_1.spk', '/path/to/spk_file_2.spk'}, '/path/to/output_file.mat'}
 ```
 
-It is usually inconvenient to do this from the matlab command line however, so I created a script - `processing_launcher.sh` - that can be used to construct this matlab command, and launch the matlab engine with this command as input. This script simply takes in a bash array of spk files. It can be called like this:
+It is usually inconvenient to do this from the matlab command line however, so I created a script - `processing_launcher_O2.sh` - that can be used to construct this matlab command, and launch the matlab engine with this command as input. This script simply takes in a bash array of spk files. It can be called like this:
 ```
-/path/to/processing_launcher.sh /path/to/spk_file_1.spk /path/to/spk_file_2.spk
+/path/to/processing_launcher.sh "#GB" "hr:mn:sc" /path/to/spk_file_1.spk /path/to/spk_file_2.spk
 ```
 
 or if you have a large number of spike files in a directory, it is convenient to use a `find` command to automatically locate all of the .spk files in a directory like this:
 ```
-Orchestra~$ /path/to/processing_launcher.sh $(find /path/to/spk_file_directory -name '*.spk')
-O2~$ sbatch -p mpi -t 50:00:00 /path/to/processing_launcher_O2.sh $(find /path/to/spk_file_directory -name '*.spk')
+O2~$ sbatch -p priority -t 5:00 "#GB" "hr:mn:sc" /path/to/processing_launcher_O2.sh $(find /path/to/spk_file_directory -name '*.spk')
 ```
 
 Initiating preprocessing using `processing_launcher_O2.sh` will automatically name the output file after the first .spk file specified as an input, with the '.spk' suffix replaced with '.mat'.
 
-Preprocessing can take a very long time, and a lot of memory for input files containing a large number of spikes, so I recommend running it on orchestra or O2.
+Preprocessing can take a very long time, and a lot of memory for input files containing a large number of spikes, so I recommend running it on O2.
 
 How It Works
 ------------
-The spikes on each electrode are clustered based on their first three principal components using Gaussian mixture models. For each electrode, data is attempted to be clustered using up to five clusters. If clustering fails before five clusterings are generated, then clustering is aborted 
+The spikes on each electrode are clustered based on their first three principal components using Gaussian mixture models. For each electrode, data is attempted to be clustered using up to five clusters. If clustering fails before five clusterings are generated, then clustering is aborted. 
 
 Manual Cluster Numbering
 ------------------------
