@@ -6,7 +6,10 @@ def datetime_str_to_datetime(datetime_str):
     """
     This converts the strings generated when matlab datetimes are written to a table to python datetime objects
     """
-    return datetime.strptime(datetime_str, '%d-%b-%Y %H:%M:%S')
+    if len(datetime_str) == 24: # Check for milliseconds
+        return datetime.strptime(datetime_str, '%d-%b-%Y %H:%M:%S.%f')
+    else:
+        return datetime.strptime(datetime_str, '%d-%b-%Y %H:%M:%S')
 
 def well_row_letter_to_number(letter):
     """

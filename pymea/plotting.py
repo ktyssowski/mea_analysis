@@ -8,6 +8,7 @@ from matplotlib import mlab as mlab
 import random
 from datetime import datetime, timedelta
 from pymea import supplement_to_plotting as psupp
+import math
 
 def plot_units_from_spike_table(spike_table):
     time_vector = spike_table['time'].map(mc.datetime_str_to_datetime)
@@ -37,7 +38,7 @@ def plot_unit_traces(category_dataframe, yscale = 'linear', **plot_kwargs):
         plt.plot(unit_table['time'], unit_table['spike_freq'], **plot_kwargs)
         plt.yscale(yscale)
 
-def plot_unit_traces_plus_means(category_dataframe, yscale = 'linear', light = False, data_col = 'spike_freq', **plot_kwargs):
+def plot_unit_traces_plus_means(category_dataframe, yscale = 'linear', repeated = False, data_col = 'spike_freq', alt_x = False, x_label = 'Time (days)', title = 'Unit Traces and Mean', **plot_kwargs):
     """
     Plots spike frequency unit traces for each neural unit in the provided category dataframe, along with 
     the mean trace (in black)
@@ -48,25 +49,25 @@ def plot_unit_traces_plus_means(category_dataframe, yscale = 'linear', light = F
     
     for unit in category_dataframe['unit_name'].unique():
         unit_table = category_dataframe.query('unit_name == @unit')
-        if light == True:
+        if repeated == True:
             time_vector = unit_table['time']
-        plt.plot(time_vector, unit_table[data_col], **plot_kwargs)
+        plt.plot(time_vector, unit_table[data_col], alpha=0.4, **plot_kwargs)
     
     mean_freq_traces = category_dataframe.groupby(('condition', 'time'))[data_col].mean()
     mean_freq_traces = mean_freq_traces.rename(data_col).reset_index() # Convert the multiindexed series back to a dataframe
     for condition in mean_freq_traces['condition'].unique():
         condition_trace = mean_freq_traces.query('condition == @condition')
-        if light == True:
+        if repeated == True:
             time_vector = condition_trace['time']
         plt.plot(time_vector, condition_trace[data_col], 'k')
 
     plt.yscale(yscale)
-    plt.xlabel('Time (days)')
+    plt.xlabel(x_label)
     plt.ylabel(data_col)
-    plt.title('Unit Traces and Mean')
+    plt.title(title)
     plt.legend(mean_freq_traces['condition'].unique()) 
 
-def plot_unit_traces_plus_medians(category_dataframe, yscale = 'linear', data_col = 'spike_freq', **plot_kwargs):
+def plot_unit_traces_plus_medians(category_dataframe, yscale = 'linear', data_col = 'spike_freq', alt_x = False, x_label = 'time', title = 'Spike Frequency Traces', **plot_kwargs):
     """
     Plots spike frequency unit traces for each neural unit in the provided category dataframe, along with 
     the mean trace (in black)
@@ -86,9 +87,9 @@ def plot_unit_traces_plus_medians(category_dataframe, yscale = 'linear', data_co
         plt.plot(time_vector, condition_trace[data_col], 'k')
 
     plt.yscale(yscale)
-    plt.xlabel('time')
+    plt.xlabel(x_label)
     plt.ylabel('spike frequency')
-    plt.title('Spike Frequency Traces')
+    plt.title(title)
     plt.legend(mean_freq_traces['condition'].unique()) 
     
 def plot_unit_points_plus_means(category_dataframe, title, divide_fn, **plot_kwargs):
@@ -139,7 +140,7 @@ def plot_unit_frequency_distributions(category_dataframe, **kwargs):
     for condition in mean_freqs_by_condition['condition']:
         sns.distplot(mean_freqs_by_condition.query('condition == @condition')['mean_freq'].map(np.log), bins=100)
 
-def plot_mean_frequency_traces(category_dataframe, data_col = 'spike_freq', **kwargs):
+def plot_mean_frequency_traces(category_dataframe, data_col = 'spike_freq', alt_x = False, x_label = 'time', title = 'Mean Traces', Ret = False, **kwargs):
     """
     Plots the mean frequency trace for each condition in category_dataframe
     """
@@ -147,14 +148,19 @@ def plot_mean_frequency_traces(category_dataframe, data_col = 'spike_freq', **kw
     mean_freq_traces = mean_freq_traces.rename(data_col).reset_index() # Convert the multiindexed series back to a dataframe
     for condition in mean_freq_traces['condition'].unique():
         condition_trace = mean_freq_traces.query('condition == @condition')
-        plt.plot(condition_trace['time'], condition_trace[data_col])
+        if alt_x == False:
+            plt.plot(condition_trace['time'], condition_trace[data_col])
+        else:
+            plt.plot(alt_x, condition_trace[data_col])
 
-    plt.xlabel('time')
+    plt.xlabel(x_label)
     plt.ylabel(data_col)
-    plt.title('Mean Traces')
+    plt.title(title)
     plt.legend(mean_freq_traces['condition'].unique())
+    if Ret == True:
+        return mean_freq_traces       
     
-def plot_median_frequency_traces(category_dataframe, yscale = 'linear', quartiles = True, data_col = 'spike_freq', **kwargs):
+def plot_median_frequency_traces(category_dataframe, yscale = 'linear', quartiles = True, data_col = 'spike_freq', alt_x = False, x_label = 'time', **kwargs):
     """
     Plots the median frequency trace for each condition in category_dataframe
     """
@@ -167,15 +173,22 @@ def plot_median_frequency_traces(category_dataframe, yscale = 'linear', quartile
     
     for condition in median_freq_traces['condition'].unique():
         condition_trace = median_freq_traces.query('condition == @condition')
-        ct = plt.plot(condition_trace['time'], condition_trace[data_col])
+        if alt_x == False:
+            ct = plt.plot(condition_trace['time'], condition_trace[data_col])
+        else:
+            ct = plt.plot(alt_x, condition_trace[data_col])
         if quartiles == True:
             Q1_trace = Q1.query('condition == @condition')
             Q3_trace = Q3.query('condition == @condition')
-            plt.plot(Q1_trace['time'], Q1_trace[data_col], '--', color = ct[0].get_color())
-            plt.plot(Q3_trace['time'], Q3_trace[data_col], '--', color = ct[0].get_color())
+            if alt_x == False:
+                plt.plot(Q1_trace['time'], Q1_trace[data_col], '--', color = ct[0].get_color())
+                plt.plot(Q3_trace['time'], Q3_trace[data_col], '--', color = ct[0].get_color())
+            else:
+                plt.plot(alt_x, Q1_trace[data_col], '--', color = ct[0].get_color())
+                plt.plot(alt_x, Q3_trace[data_col], '--', color = ct[0].get_color())
 
     plt.yscale(yscale)
-    plt.xlabel('time')
+    plt.xlabel(x_label)
     plt.ylabel('spike frequency')
     plt.title('Median Spike Frequency Traces')
     plt.legend(median_freq_traces['condition'].unique())
@@ -299,7 +312,7 @@ def plot_medians_per_rec(category_dataframe, rec_starts, rec_ends, num_rec, ysca
     plt.title('Median Spike Frequency Per Recording')
     plt.legend(median_unit_freq['condition'].unique())
     
-def construct_categorized_dataframe(data_table, filter_dict):
+def construct_categorized_dataframe(data_table, filter_dict, var_name = 'spike_freq'):
     """
     Takes the data from the matlab csv generated by preprocessing and applies filters to column names
     allowing for the categorization of data
@@ -316,8 +329,9 @@ def construct_categorized_dataframe(data_table, filter_dict):
         {
             'time': time_vector,
             'condition': condition_name,
-            'spike_freq': condition_column,
-            'unit_name': condition_column.name
+            var_name: condition_column,
+            'unit_name': condition_column.name,
+            'well': mc.get_well_number(condition_column.name)
         } for condition_name, condition_filter in filter_dict.iteritems()
             for condition_column in filter_unit_columns(condition_filter, unit_table)
     )
@@ -393,19 +407,83 @@ def makeTables(b_start, b_stop, s_start, e_start, cat_table):
     end_table = cat_table.query('time > "%s"'%e_start)
     return(baseline_table, stim_table, end_table)
 
+def get_mean_med_traces(c_filter, data_col, b_filter, FR_gradient):
+    mean_freq_traces = c_filter.groupby(('condition', 'time'))[data_col].mean()
+    mean_freq_traces = mean_freq_traces.rename(data_col).reset_index() # Convert the multiindexed series back to a dataframe
+    mean_freq_traces_b = b_filter.groupby(('condition', 'time'))[data_col].mean()
+    mean_freq_traces_b = mean_freq_traces_b.rename(data_col).reset_index() # Convert the multiindexed series back to a dataframe
+    
+    median_freq_traces = c_filter.groupby(('condition', 'time'))[data_col].median()
+    median_freq_traces = median_freq_traces.rename(data_col).reset_index() # Convert the multiindexed series back to a dataframe
+    median_freq_traces_b = b_filter.groupby(('condition', 'time'))[data_col].median()
+    median_freq_traces_b = median_freq_traces_b.rename(data_col).reset_index() # Convert the multiindexed series back to a dataframe
+    
+    if FR_gradient == True:
+        b_mean_freq = b_filter.groupby(('unit_name'))['spike_freq'].mean()
+        b_mean_freq = b_mean_freq.rename('spike_freq')#.reset_index()
+        u_color = (np.log10(b_mean_freq)+3)/3
+    return(mean_freq_traces, mean_freq_traces_b, median_freq_traces, median_freq_traces_b, u_color)
 
 
-def foldInductionPlusMean_stim(cat_table, baseline_table, stim_table, condition, title, var, minHz, maxHz, ymax, plotFolds, foldMin, y_scale, filter_wells, data_col = 'spike_freq'):
+def make_fold_plot(c_filter, t_start, u_color, FR_gradient, plotFolds, norm_by_median, norm_by_mean, mean_freq_traces_b, median_freq_traces_b, mean_freq_traces, median_freq_traces, y_scale, data_col, title, ymax):
+    plt.xlabel('Time (days)')
+    plt.ylim(0.00005,ymax)
+    for unit_name in c_filter['unit_name'].unique():
+        unit = c_filter.query('unit_name == @unit_name')
+        u_time = unit['time']
+        time_vector_u = u_time-t_start
+        time_vector_u = time_vector_u.map(lambda x: x.total_seconds()/86400.0)
+        this_color = u_color[unit_name]
+        if FR_gradient == True:
+            if plotFolds == True:
+                if norm_by_median.empty == False:
+                    plt.plot(time_vector_u, np.divide(unit['folds'], norm_by_mean), color=plt.cm.gnuplot2(this_color, .4))
+                else:
+                    plt.plot(time_vector_u, unit['folds'], color=plt.cm.gnuplot2(this_color, .4))
+            else:
+                plt.plot(time_vector_u, unit[data_col], color=plt.cm.gnuplot2(this_color, .4))
+            #color_ind = color_ind+1
+        else:
+            if plotFolds == True:
+                if norm_by_median.empty == False:
+                    plt.plot(time_vector_u, np.divide(unit['folds'], norm_by_mean), color=(random.random(), random.random(), random.random(), .4))
+                else:
+                    plt.plot(time_vector_u, unit['folds'], color=(random.random(), random.random(), random.random(), .4))
+            else:
+                plt.plot(time_vector_u, unit[data_col], color=(random.random(), random.random(), random.random(), .4))
+        
+    meanOfMean = np.mean(mean_freq_traces_b[data_col])
+    meanOfMedian = np.mean(median_freq_traces_b[data_col])
+    m_time = mean_freq_traces['time']
+    time_vector_m = m_time-t_start
+    time_vector_m = time_vector_m.map(lambda x: x.total_seconds()/86400.0)
+    if plotFolds == True:
+        plt.axhline(y=1, xmin=0, xmax=1, hold=None, color='black')
+        if norm_by_mean.empty == False:
+            plt.plot(time_vector_m, np.divide(mean_freq_traces[data_col]/meanOfMean,norm_by_mean), color=(0,0,0))
+            plt.plot(time_vector_m, np.divide(median_freq_traces[data_col]/meanOfMedian,norm_by_median), 'r')
+        else:
+            plt.plot(time_vector_m, mean_freq_traces[data_col]/meanOfMean, color=(0,0,0))
+            plt.plot(time_vector_m, median_freq_traces[data_col]/meanOfMedian, 'r')
+        plt.ylabel('Fold Induction of Spike Frequency (Hz)')
+    else:
+        plt.axhline(y=meanOfMean, xmin=0, xmax=1, hold=None, color='black')
+        plt.plot(time_vector_m, mean_freq_traces[data_col], color=(0,0,0))
+        plt.plot(time_vector_m, median_freq_traces[data_col], 'r')      
+        plt.ylabel('Spike Frequency (Hz)')
+    plt.yscale(y_scale)
+    plt.title(title)
+    plt.show()
+    return(meanOfMean, meanOfMedian)
+
+def foldInductionPlusMean_stim(cat_table, baseline_table, stim_table, condition, title, var, minHz, maxHz, ymax, plotFolds, foldMin, y_scale, filter_wells, data_col, plot_group, FR_gradient, norm_by_mean, norm_by_median, plot_wells):
     '''
     This function plots baseline-normalized plots for a given condition that include both all of the channels passing filters and the mean(black)+median(red) of those channels--use for stimulated samples b/c filters out things that don't change with stim
     '''
     c = cat_table.query('condition == "%s"'%condition)
     b = baseline_table.query('condition == "%s"'%condition)
     s = stim_table.query('condition == "%s"'%condition)
-    #time_days = (c['time']-c['time'].iloc[0]).map(lambda x: x.days)
-    #time_seconds = (c['time']-c['time'].iloc[0]).map(lambda x: x.seconds)
-    #time_vector = (time_days + (time_seconds/3600/24)).unique()
-    t_start = min(c['time'])#c['time'].iloc[0]
+    t_start = min(s['time'])
     
     c_filter, b_filter, count_real, count_live, cf = psupp.filter_neurons_homeostasis(c, b, s, ind_filter=True, var=var, minHz=minHz, maxHz=maxHz, foldMin=foldMin, filter_wells=filter_wells, data_col=data_col)
     
@@ -417,70 +495,39 @@ def foldInductionPlusMean_stim(cat_table, baseline_table, stim_table, condition,
         print('condition: ' + str(len(c['unit_name'].unique())))
         return
     
-    plt.xlabel('Time (days)')
-    plt.ylim(0.00005,ymax)
-    
-    #print(c_filter)
+    if plot_group != 0:
+        c_filter, b_filter = psupp.select_homeo_units(plot_group, c_filter, b_filter)
 
-    mean_freq_traces = c_filter.groupby(('condition', 'time'))[data_col].mean()
-    mean_freq_traces = mean_freq_traces.rename(data_col).reset_index() # Convert the multiindexed series back to a dataframe
-    mean_freq_traces_b = b_filter.groupby(('condition', 'time'))[data_col].mean()
-    mean_freq_traces_b = mean_freq_traces_b.rename(data_col).reset_index() # Convert the multiindexed series back to a dataframe
+    mean_freq_traces, mean_freq_traces_b, median_freq_traces, median_freq_traces_b, u_color = get_mean_med_traces(c_filter, data_col, b_filter, FR_gradient)
+        
+    meanOfMean, meanOfMedian = make_fold_plot(c_filter, t_start, u_color, FR_gradient, plotFolds, norm_by_median, norm_by_mean, mean_freq_traces_b, median_freq_traces_b, mean_freq_traces, median_freq_traces, y_scale, data_col, title, ymax)
     
-    median_freq_traces = c_filter.groupby(('condition', 'time'))[data_col].median()
-    median_freq_traces = median_freq_traces.rename(data_col).reset_index() # Convert the multiindexed series back to a dataframe
-    median_freq_traces_b = b_filter.groupby(('condition', 'time'))[data_col].median()
-    median_freq_traces_b = median_freq_traces_b.rename(data_col).reset_index() # Convert the multiindexed series back to a dataframe
-    
-    for unit_name in c_filter['unit_name'].unique():
-        unit = c_filter.query('unit_name == @unit_name')
-        u_time = unit['time']
-        time_vector_u = u_time-t_start
-        time_vector_u = time_vector_u.map(lambda x: x.total_seconds()/86400.0)
-        if plotFolds == True:
-            plt.plot(time_vector_u, unit['folds'], color=(random.random(), random.random(), random.random(), .4))
-        else:
-            plt.plot(time_vector_u, unit[data_col], color=(random.random(), random.random(), random.random(), .4))
-    
-    plt.title(title)
-    meanOfMean = np.mean(mean_freq_traces_b[data_col])
-    meanOfMedian = np.mean(median_freq_traces_b[data_col])
-    m_time = mean_freq_traces['time']
-    time_vector_m = m_time-t_start
-    time_vector_m = time_vector_m.map(lambda x: x.total_seconds()/86400.0)
-    if plotFolds == True:
-        plt.axhline(y=1, xmin=0, xmax=1, hold=None, color='black')
-        plt.plot(time_vector_m, mean_freq_traces[data_col]/meanOfMean, color=(0,0,0))
-        plt.plot(time_vector_m, median_freq_traces[data_col]/meanOfMedian, 'r')
-        plt.ylabel('Fold Induction of Spike Frequency (Hz)')
-    else:
-        plt.axhline(y=meanOfMean, xmin=0, xmax=1, hold=None, color='black')
-        plt.plot(time_vector_m, mean_freq_traces[data_col], color=(0,0,0))
-        plt.plot(time_vector_m, median_freq_traces[data_col], 'r')      
-        plt.ylabel('Spike Frequency (Hz)')
-    plt.yscale(y_scale)
+    #plot individual well plots
+    if plot_wells == True:
+        for w in c_filter['well'].unique():
+            plt.figure()
+            well_c = c_filter.query('well == @w')
+            well_b = b_filter.query('well == @w')
+            well_mft, well_mftb, well_mdft, well_mdftb, well_color = get_mean_med_traces(well_c, data_col, well_b, FR_gradient)
+            well_title = 'Well ' + str(w)
+            make_fold_plot(well_c, t_start, well_color, FR_gradient, plotFolds, norm_by_median, norm_by_mean, well_mftb, well_mdftb, well_mft, well_mdft, y_scale, data_col, well_title, ymax)          
 
     print('respond to drug: ' + str(len(c_filter['unit_name'].unique())))
     print('stay alive: ' + str(count_live))
     print('real: ' + str(count_real))
-    print('condition: ' + str(len(c['unit_name'].unique())))
-    
-    plt.show()
+    print('condition: ' + str(len(c['unit_name'].unique())))    
     
     return (c_filter['unit_name'].unique())
 
 
-def foldInductionPlusMean_ctrl(cat_table, baseline_table, stim_table, condition, title, var, minHz, maxHz, ymax, plotFolds, foldMin, y_scale, data_col = 'spike_freq'):
+def foldInductionPlusMean_ctrl(cat_table, baseline_table, stim_table, condition, title, var, minHz, maxHz, ymax, plotFolds, foldMin, y_scale, filter_wells, data_col, plot_group, FR_gradient, norm_by_mean, norm_by_median, plot_wells):
     '''
     This function plots baseline-normalized plots for a given condition that include both all of the channels passing filters and the mean(black)+median(red) of those channels--use for unstim samples
     '''
     c = cat_table.query('condition == "%s"'%condition)
     b = baseline_table.query('condition == "%s"'%condition)
     s = stim_table.query('condition == "%s"'%condition)
-    #time_days = (cat_table['time']-cat_table['time'].iloc[0]).map(lambda x: x.days)
-    #time_seconds = (cat_table['time']-cat_table['time'].iloc[0]).map(lambda x: x.seconds)
-    #time_vector = (time_days + (time_seconds/3600/24)).unique()
-    t_start = min(c['time'])#c['time'].iloc[0]
+    t_start = min(s['time'])
 
     c_filter, b_filter, count_real, count_live, count_final = psupp.filter_neurons_homeostasis(c, b, s, ind_filter=False, var=var, minHz=minHz, maxHz=maxHz, foldMin=foldMin, filter_wells=False, data_col = data_col)
     
@@ -489,49 +536,25 @@ def foldInductionPlusMean_ctrl(cat_table, baseline_table, stim_table, condition,
         print('stay alive: ' + str(count_live))
         print('real: ' + str(count_real))
         print('condition: ' + str(len(c['unit_name'].unique())))
-        return
+        return (0,0,0)
 
-    mean_freq_traces = c_filter.groupby(('condition', 'time'))[data_col].mean()
-    mean_freq_traces = mean_freq_traces.rename(data_col).reset_index() # Convert the multiindexed series back to a dataframe
-    mean_freq_traces_b = b_filter.groupby(('condition', 'time'))[data_col].mean()
-    mean_freq_traces_b = mean_freq_traces_b.rename(data_col).reset_index() # Convert the multiindexed series back to a dataframe
+    # select to show only neurons that do homeostase or don't
+    if plot_group != 0:
+        c_filter, b_filter = psupp.select_homeo_units(plot_group, c_filter, b_filter)
     
-    median_freq_traces = c_filter.groupby(('condition', 'time'))[data_col].median()
-    median_freq_traces = median_freq_traces.rename(data_col).reset_index() # Convert the multiindexed series back to a dataframe
-    median_freq_traces_b = b_filter.groupby(('condition', 'time'))[data_col].median()
-    median_freq_traces_b = median_freq_traces_b.rename(data_col).reset_index() # Convert the multiindexed series back to a dataframe
+    mean_freq_traces, mean_freq_traces_b, median_freq_traces, median_freq_traces_b, u_color = get_mean_med_traces(c_filter, data_col, b_filter, FR_gradient)
+        
+    meanOfMean, meanOfMedian = make_fold_plot(c_filter, t_start, u_color, FR_gradient, plotFolds, norm_by_median, norm_by_mean, mean_freq_traces_b, median_freq_traces_b, mean_freq_traces, median_freq_traces, y_scale, data_col, title, ymax)
     
-    plt.xlabel('Time (days)')
-    plt.ylim(0.00005,ymax)
-    
-    for unit_name in c_filter['unit_name'].unique():
-        unit = c_filter.query('unit_name == @unit_name')
-        u_time = unit['time']
-        time_vector_u = u_time-t_start
-        time_vector_u = time_vector_u.map(lambda x: x.total_seconds()/86400.0)
-        if plotFolds == True:
-            plt.plot(time_vector_u, unit['folds'], color=(random.random(), random.random(), random.random(), .4))
-        else:
-            plt.plot(time_vector_u, unit[data_col], color=(random.random(), random.random(), random.random(), .4))
-
-    plt.title(title)
-    meanOfMean = np.mean(mean_freq_traces_b[data_col])
-    meanOfMedian = np.mean(median_freq_traces_b[data_col])
-    m_time = mean_freq_traces['time']
-    time_vector_m = m_time-t_start
-    time_vector_m = time_vector_m.map(lambda x: x.total_seconds()/86400.0)
-    if plotFolds == True:
-        plt.axhline(y=1, xmin=0, xmax=1, hold=None, color='black')
-        plt.plot(time_vector_m, mean_freq_traces[data_col]/meanOfMean, color=(0,0,0))
-        plt.plot(time_vector_m, median_freq_traces[data_col]/meanOfMedian, 'r')
-        plt.ylabel('Fold Induction of Spike Frequency (Hz)')
-    else:
-        plt.axhline(y=meanOfMean, xmin=0, xmax=1, hold=None, color='black')
-        plt.plot(time_vector_m, mean_freq_traces[data_col], color=(0,0,0))
-        plt.plot(time_vector_m, median_freq_traces[data_col], 'r')
-        plt.ylabel('Spike Frequency (Hz)')
-
-    plt.yscale(y_scale)
+    #plot individual well plots
+    if plot_wells == True:
+        for w in c_filter['well'].unique():
+            plt.figure()
+            well_c = c_filter.query('well == @w')
+            well_b = b_filter.query('well == @w')
+            well_mft, well_mftb, well_mdft, well_mdftb, well_color = get_mean_med_traces(well_c, data_col, well_b, FR_gradient)
+            well_title = 'Well ' + str(w)
+            make_fold_plot(well_c, t_start, well_color, FR_gradient, plotFolds, norm_by_median, norm_by_mean, well_mftb, well_mdftb, well_mft, well_mdft, y_scale, data_col, well_title, ymax)
     
     print('stay alive: ' + str(count_live))
     print('real: ' + str(count_real))
@@ -539,18 +562,22 @@ def foldInductionPlusMean_ctrl(cat_table, baseline_table, stim_table, condition,
     
     plt.show()
     
-    return (c_filter['unit_name'].unique())
+    return (c_filter['unit_name'].unique(), mean_freq_traces[data_col]/meanOfMean, median_freq_traces[data_col]/meanOfMedian)
 
-def foldInductionPlusMean(cat_table, baseline_table, stim_table, condition, title, var=10, minHz = 0.001, maxHz = 100, ind_filter = True, ymax = 10, plotFolds = True, foldMin = 0.001, y_scale = 'log', filter_wells = True, data_col ='spike_freq'):
+def foldInductionPlusMean(cat_table, drug_time, condition, title, var=10, minHz = 0.001, maxHz = 100, ind_filter = True, ymax = 10, plotFolds = True, foldMin = 0.001, y_scale = 'linear', filter_wells = False, data_col ='spike_freq', plot_group = 0, FR_gradient = True, norm_by_mean = pd.Series([]), norm_by_median = pd.Series([]), plot_wells=True):
     '''
     Combine stim and ctrl fxns
     '''
+    mean = False
+    median = False
+    baseline_table = cat_table.query('time < @drug_time')
+    stim_table = cat_table.query('time >= @drug_time')
     if ind_filter:
-        filtered_units = foldInductionPlusMean_stim(cat_table, baseline_table, stim_table, condition, title, var, minHz, maxHz, ymax, plotFolds, foldMin, y_scale, filter_wells, data_col)
+        filtered_units = foldInductionPlusMean_stim(cat_table, baseline_table, stim_table, condition, title, var, minHz, maxHz, ymax, plotFolds, foldMin, y_scale, filter_wells, data_col, plot_group, FR_gradient, norm_by_mean, norm_by_median, plot_wells)
     else:
-        filtered_units = foldInductionPlusMean_ctrl(cat_table, baseline_table, stim_table, condition, title, var, minHz, maxHz, ymax, plotFolds, foldMin, y_scale, data_col)
+        filtered_units, mean, median = foldInductionPlusMean_ctrl(cat_table, baseline_table, stim_table, condition, title, var, minHz, maxHz, ymax, plotFolds, foldMin, y_scale, filter_wells, data_col, plot_group, FR_gradient, norm_by_mean, norm_by_median, plot_wells)
         
-    return filtered_units
+    return filtered_units, mean, median
 
 
 def count_active_neurons(cat_table, baseline_table = 0, stim_table = 0, threshold = 0.001, folds = 0, kill_neurons = 0, return_value = 0):
@@ -651,7 +678,7 @@ def compare_active_per_sec(cat_table, threshold):
     plt.ylabel('Number of units')
     plt.title('Neuron turnover')
 
-def unit_mean_freq_hist(category_dataframe, num_bins = 50, plot = 'linear', xmax = 2.5, ymax = 80):
+def unit_mean_freq_hist(category_dataframe, num_bins = 50, plot = 'linear', title = 'Mean Firing Rate Per Unit'):
     '''
     Plots histogram showing the distribution of mean firing rate of each unit in category_dataframe
     '''
@@ -666,12 +693,10 @@ def unit_mean_freq_hist(category_dataframe, num_bins = 50, plot = 'linear', xmax
         n, bins, patches = plt.hist(np.log10(unit_freq_mean['spike_freq']), bins = num_bins)
         
     # add a 'best fit' line
-    y = mlab.normpdf(bins, mu, sigma)
-    plt.plot(bins, y, 'r--')
-    plt.axvline(mu, color ='r')
-    plt.title('Mean Firing Rate per Unit')
-    plt.xlim([0,xmax])
-    plt.ylim([0,ymax])
+   # y = mlab.normpdf(bins, mu, sigma)
+    #plt.plot(bins, y, 'r--')
+    #plt.axvline(mu, color ='r')
+    plt.title(title)
 
 def unit_mean_freq_hist_compare_cond(category_dataframe, num_bins = 50, plot = 'linear'):
     '''
@@ -810,7 +835,7 @@ def cdf_foldInduction(b_filter, s_filter, title = ""):
     timepoints during a homeostasis experiment
     '''
     s_start = s_filter['time'].iloc[0]
-    hours = np.array([0, 1, 3, 6, 12, 24, 48, 72, 96, 120, 144, 168, 192])
+    hours = np.array([0, 1, 3, 6, 12, 24, 36, 48,])# 72, 96, 120, 144, 168, 192])
     max_hours = (max(s_filter['time']) - s_start).days*24 + (max(s_filter['time']) - s_start).seconds/3600
     hours = hours[hours<= max_hours]
     
@@ -820,7 +845,7 @@ def cdf_foldInduction(b_filter, s_filter, title = ""):
     baseline_fold = b_filter.groupby(('unit_name'))['folds'].mean()
     baseline_fold = baseline_fold.rename('folds').reset_index()
     sort, p = psupp.cdf(baseline_fold['folds'])
-    plt.plot(sort, p, color=plt.cm.gist_yarg(0.07))
+    plt.plot(sort, p, color='r')#plt.cm.gist_yarg(0.07))
     
     for timepoint in hours:
         period_start = s_start + timedelta(hours=timepoint)
@@ -836,7 +861,44 @@ def cdf_foldInduction(b_filter, s_filter, title = ""):
     plt.legend(legend_labels)
     plt.xlabel('FR/baseline')
     plt.ylabel('Fraction of Population')
+    plt.xscale('log')
     plt.title('CDF ' + title)
     
     plt.xlim([0, 10])
     plt.axhline(y=0.5, linestyle='--', color = 'k')
+    
+def hist_end_vs_start(units, baseline_stop, cat_table, cond, end_time = 0, nbins=100):
+    '''
+    Plots a histogram of the firing rate (of each unit in units) during the last hour divided by the hour before drug was added.
+    '''
+    ratio_table = psupp.calc_end_vs_start(units, baseline_stop, cat_table, end_time)
+    hist_val = ratio_table['ratio']
+    
+    plt.hist(hist_val, nbins)#, bins=np.logspace(np.log10(0.0001),np.log10(1000), nbins))
+    plt.xscale('linear')
+    plt.axvline(1, color='k')
+    plt.ylabel('Frequency')
+    plt.xlabel('FR end / FR start')
+    plt.title(cond)
+
+def scatter_homeo_vs_baseline(units, baseline_stop, cat_table, baseline_table, cond, end_time = 0, nbins=100):
+    '''
+    Makes a scatter plot of the end/start ratio on the y-axis, and the average baseline FR on the x-axis, for the units in 'units'.
+    '''
+    # Calculate end/start ratio
+    ratio_table = psupp.calc_end_vs_start(units, baseline_stop, cat_table, end_time)
+    ratio_table = ratio_table.sort_values(by = 'unit_name')
+    # Calculate mean FR
+    baseline_table = baseline_table.loc[baseline_table['unit_name'].isin(units)]
+    unit_freq_mean = baseline_table.groupby(('unit_name'))['spike_freq'].mean()
+    unit_freq_mean = unit_freq_mean.rename('spike_freq').reset_index() # Convert the multiindexed series back to a dataframe
+    unit_freq_mean = unit_freq_mean.sort_values(by = 'unit_name')
+    
+    #joined = unit_freq_mean.set_index('unit_name').join(ratio_table.set_index('unit_name'), on = 'unit_name')
+    #caller.join(other.set_index('key'), on='key')
+    
+    plt.scatter(unit_freq_mean['spike_freq'], ratio_table['ratio'])
+    plt.xlabel('Mean Baseline FR (Hz)')
+    plt.ylabel('End/Start')
+    plt.title(cond)
+    #return (ratio_table, unit_freq_mean)#, joined)

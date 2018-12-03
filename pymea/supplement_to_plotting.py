@@ -43,15 +43,15 @@ def filter_neurons_homeostasis(cat_table, baseline_table, stim_table, ind_filter
             unit_s = s.query('unit_name == @unit_name')
             meanOfBaseline = np.mean(unit_b[data_col])
             varOfBaseline = (unit_b.loc[:,data_col].max() - unit_b.loc[:,data_col].min())/meanOfBaseline
-            meanAfterDrug = np.mean(unit_s[0:60][data_col])
+            meanAfterDrug = np.mean(unit_s[1:6][data_col])
             folds = unit[data_col]/meanOfBaseline
             folds_b = unit_b[data_col]/meanOfBaseline
             folds_end = unit.query('time > @last_hr')[data_col]/meanOfBaseline
             if meanOfBaseline > minHz and meanOfBaseline < maxHz and varOfBaseline < var:
                 count_real = count_real+1
-                if (sum((folds) < foldMin)<100) and (sum(folds > 500)<100):
+                if (sum((folds) < foldMin)<100):# and (sum(folds > 500)<100):
                     count_live = count_live+1
-                    if (ind_filter == False) or (meanOfBaseline < meanAfterDrug): 
+                    if (ind_filter == False) or (meanOfBaseline < 1*meanAfterDrug): 
                         count_final = count_final+1
                         well_num = mc.get_well_number(unit_name)
                         unit.loc[:,'well'] = well_num
@@ -73,7 +73,7 @@ def filter_neurons_homeostasis(cat_table, baseline_table, stim_table, ind_filter
 
 def drop_outlier_wells(c_filter, b_filter, data_col = 'spike_freq'):
     '''
-    Crops wells whose correlation coefficient with the mean/median frequency of the entire condition is below 0.75
+    Crops wells whose correlation coefficient with both the mean/median frequency of the entire condition is below 0.6
     '''
     mean_freq_traces = c_filter.groupby(('condition', 'time'))[data_col].mean()
     mean_freq_traces = mean_freq_traces.rename(data_col).reset_index()
@@ -125,5 +125,61 @@ def cdf(data):
     # make array of proportions from 0:1, the length of the data
     p = 1. * np.arange(len(data)) / (len(data) - 1)
     return (sorted_data, p)
+
+def select_homeo_units(plot_group, c_filter, b_filter):
+    ''' 
+    Returns the data table of neurons whose end firing is below (plot_group=1) or above (plot_group=2) 
+    double the baseline firing. Used to show plots with only the neurons that homeostased or didn't.
+    '''
+    low_units = []
+    mid_units = []
+    high_units = []
+    baseline_stop = max(b_filter['time'])
+    end_time = max(c_filter['time']) - timedelta(hours = 1)
+    lasthr_drug = end_time - timedelta(hours = 1)
+    lasthr_baseline = baseline_stop - timedelta(hours = 1)
+        
+    for unit in c_filter['unit_name'].unique():
+        unit_end = c_filter.query('unit_name == @unit and time >= @lasthr_drug and time <= @end_time')
+        unit_start = c_filter.query('unit_name == @unit and time >= @lasthr_baseline and time < @baseline_stop')
+        mean_end = unit_end['spike_freq'].mean()
+        mean_start = unit_start['spike_freq'].mean()
+        homeo_val = mean_end/mean_start
+        if homeo_val < 0.5:
+            low_units.append(unit)
+        elif homeo_val <= 1.5:
+            mid_units.append(unit)
+        else:
+            high_units.append(unit)
+    if plot_group == 1:
+        # select neurons that died
+        c_filter = c_filter.loc[c_filter['unit_name'].isin(low_units)]
+        b_filter = b_filter.loc[b_filter['unit_name'].isin(low_units)]
+    elif plot_group == 2:
+        # select neurons that worked
+        c_filter = c_filter.loc[c_filter['unit_name'].isin(mid_units)]
+        b_filter = b_filter.loc[b_filter['unit_name'].isin(mid_units)]
+    elif plot_group == 3:
+        # select neurons that never decreased their firing
+        c_filter = c_filter.loc[c_filter['unit_name'].isin(high_units)]
+        b_filter = b_filter.loc[b_filter['unit_name'].isin(high_units)]
+    return (c_filter, b_filter)
     
+def calc_end_vs_start(units, baseline_stop, cat_table, end_time = 0):
+    '''
+    Calculates the ratio of FR at the end of the experiment to pre-drug FR.
+    '''
+    if end_time == 0:
+        end_time = max(cat_table['time'])
+    lasthr_drug = end_time - timedelta(hours = 1)
+    lasthr_baseline = baseline_stop - timedelta(hours = 1)
     
+    units_table = cat_table.loc[cat_table['unit_name'].isin(units)]
+    units_end = units_table.query('time >= @lasthr_drug')
+    units_start = units_table.query('time >= @lasthr_baseline and time < @baseline_stop')
+    mean_end = units_end.groupby(('unit_name'))['spike_freq'].mean()
+    mean_end = mean_end.rename('spike_freq').reset_index()
+    mean_start = units_start.groupby(('unit_name'))['spike_freq'].mean()
+    mean_start = mean_start.rename('spike_freq').reset_index()
+    ratio = mean_end['spike_freq']/mean_start['spike_freq']
+    return pd.DataFrame(data = {'unit_name': mean_end['unit_name'], 'ratio': ratio})
