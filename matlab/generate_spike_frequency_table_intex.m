@@ -49,6 +49,8 @@ num_units = sum([containers_with_data(:).n_clusters]);
 num_bins = floor((stim_stop_time - stim_start_time)/seconds(bin_size));
 
 frequency_mat = zeros([num_bins, num_units]);
+times_to_first = nan([length(stim_times_all), num_units]);
+initial_freqs = nan([length(stim_times_all), num_units]);
 
 curr_unit = 1;
 unit_names = {};
@@ -65,6 +67,7 @@ for curr_container = containers_with_data(:)'
             'end_time', stim_stop_time, ...
             'bin_size', bin_size ...
         );
+    [times_to_first(:, curr_unit), initial_freqs(:, curr_unit)] = calc_first_spikes(unit_spike_times, stim_times_all);
         curr_unit = curr_unit + 1;
     end
 end
@@ -79,11 +82,13 @@ if length(unique_units) ~= length(unit_names)
 end
         
 spike_table = array2table(frequency_mat, 'VariableNames', unit_names);
-spike_table.time = datestr(((stim_start_time + seconds(bin_size)):seconds(bin_size):stim_stop_time)', 'dd-mmm-yyyy HH:MM:SS.FFF');
+spike_table.time = datestr(((stim_start_time + seconds(bin_size)):seconds(bin_size):stim_stop_time)', 'dd-mmm-yyyy HH:MM:SS.FFF'); % saves trailing edges of bin times
 writetable(spike_table, output_path);
 
 % Save stim times if they exist
 if isfield(mat_data, 'stim_times')
-    stim_times = table(mat_data.stim_times', second(mat_data.stim_times)', 'VariableNames', {'date_time', 'seconds'});
-    writetable(stim_times, 'stim_times.csv');
+    stim_table = table(mat_data.stim_times', second(mat_data.stim_times)', 'VariableNames', {'date_time', 'seconds'});
+    stim_table.firsts = array2table(times_to_first, 'VariableNames', unit_names);
+    stim_table.freqs = array2table(initial_freqs, 'VariableNames', unit_names);
+    writetable(stim_table, 'stim_table.csv');
 end
