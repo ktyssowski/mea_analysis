@@ -1,11 +1,14 @@
-function process_spk_files_parallel(spk_paths)
+function process_spk_files_parallel(mem_per_cpu, WallTime, spk_paths)
 c = parcluster;
+c.AdditionalProperties.AdditionalSubmitArgs = ['--mem-per-cpu=' mem_per_cpu];
+c.AdditionalProperties.WallTime = WallTime;
 j = c.batch(@batch_process_spk_files_parallel, 0, {spk_paths,0}, 'Pool', 18);
 clock
 wait(j);
 clock
 diary(j);
 disp(j.State);
+disp(getJobClusterData(c,j));
 if string(j.State) == "finished"
     j.fetchOutputs;
 else
