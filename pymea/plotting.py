@@ -422,10 +422,14 @@ def get_mean_med_traces(c_filter, data_col, b_filter, FR_gradient):
         b_mean_freq = b_filter.groupby(('unit_name'))['spike_freq'].mean()
         b_mean_freq = b_mean_freq.rename('spike_freq')#.reset_index()
         u_color = (np.log10(b_mean_freq)+3)/3
+    else:
+        b_mean_freq = b_filter.groupby(('unit_name'))['spike_freq'].mean()
+        b_mean_freq = b_mean_freq.rename('spike_freq')#.reset_index()
+        u_color = np.random.random_sample()*b_mean_freq
     return(mean_freq_traces, mean_freq_traces_b, median_freq_traces, median_freq_traces_b, u_color)
 
 
-def make_fold_plot(c_filter, t_start, u_color, FR_gradient, plotFolds, norm_by_median, norm_by_mean, mean_freq_traces_b, median_freq_traces_b, mean_freq_traces, median_freq_traces, y_scale, data_col, title, ymax):
+def make_fold_plot(c_filter, t_start, u_color, FR_gradient, plotFolds, norm_by_median, norm_by_mean, mean_freq_traces_b, median_freq_traces_b, mean_freq_traces, median_freq_traces, y_scale, data_col, data_col_mm, title, ymax):
     plt.xlabel('Time (days)')
     plt.ylim(0.00005,ymax)
     for unit_name in c_filter['unit_name'].unique():
@@ -452,8 +456,9 @@ def make_fold_plot(c_filter, t_start, u_color, FR_gradient, plotFolds, norm_by_m
             else:
                 plt.plot(time_vector_u, unit[data_col], color=(random.random(), random.random(), random.random(), .4))
         
-    meanOfMean = np.mean(mean_freq_traces_b[data_col])
-    meanOfMedian = np.mean(median_freq_traces_b[data_col])
+    #print(mean_freq_traces_b)
+    meanOfMean = np.mean(mean_freq_traces_b[data_col_mm])
+    meanOfMedian = np.mean(median_freq_traces_b[data_col_mm])
     m_time = mean_freq_traces['time']
     time_vector_m = m_time-t_start
     time_vector_m = time_vector_m.map(lambda x: x.total_seconds()/86400.0)
@@ -463,8 +468,8 @@ def make_fold_plot(c_filter, t_start, u_color, FR_gradient, plotFolds, norm_by_m
             plt.plot(time_vector_m, np.divide(mean_freq_traces[data_col]/meanOfMean,norm_by_mean), color=(0,0,0))
             plt.plot(time_vector_m, np.divide(median_freq_traces[data_col]/meanOfMedian,norm_by_median), 'r')
         else:
-            plt.plot(time_vector_m, mean_freq_traces[data_col]/meanOfMean, color=(0,0,0))
-            plt.plot(time_vector_m, median_freq_traces[data_col]/meanOfMedian, 'r')
+            plt.plot(time_vector_m, mean_freq_traces[data_col_mm]/meanOfMean, color=(0,0,0))
+            plt.plot(time_vector_m, median_freq_traces[data_col_mm]/meanOfMedian, 'r')
         plt.ylabel('Fold Induction of Spike Frequency (Hz)')
     else:
         plt.axhline(y=meanOfMean, xmin=0, xmax=1, hold=None, color='black')
@@ -474,9 +479,9 @@ def make_fold_plot(c_filter, t_start, u_color, FR_gradient, plotFolds, norm_by_m
     plt.yscale(y_scale)
     plt.title(title)
     plt.show()
-    return(meanOfMean, meanOfMedian)
+    return(meanOfMean, meanOfMedian, time_vector_m)
 
-def foldInductionPlusMean_stim(cat_table, baseline_table, stim_table, condition, title, var, minHz, maxHz, ymax, plotFolds, foldMin, y_scale, filter_wells, data_col, plot_group, FR_gradient, norm_by_mean, norm_by_median, plot_wells):
+def foldInductionPlusMean_stim(cat_table, baseline_table, stim_table, condition, title, var, minHz, maxHz, ymax, plotFolds, foldMin, y_scale, filter_wells, data_col, data_col_mm, plot_group, FR_gradient, norm_by_mean, norm_by_median, plot_wells):
     '''
     This function plots baseline-normalized plots for a given condition that include both all of the channels passing filters and the mean(black)+median(red) of those channels--use for stimulated samples b/c filters out things that don't change with stim
     '''
@@ -498,9 +503,9 @@ def foldInductionPlusMean_stim(cat_table, baseline_table, stim_table, condition,
     if plot_group != 0:
         c_filter, b_filter = psupp.select_homeo_units(plot_group, c_filter, b_filter)
 
-    mean_freq_traces, mean_freq_traces_b, median_freq_traces, median_freq_traces_b, u_color = get_mean_med_traces(c_filter, data_col, b_filter, FR_gradient)
+    mean_freq_traces, mean_freq_traces_b, median_freq_traces, median_freq_traces_b, u_color = get_mean_med_traces(c_filter, data_col_mm, b_filter, FR_gradient)
         
-    meanOfMean, meanOfMedian = make_fold_plot(c_filter, t_start, u_color, FR_gradient, plotFolds, norm_by_median, norm_by_mean, mean_freq_traces_b, median_freq_traces_b, mean_freq_traces, median_freq_traces, y_scale, data_col, title, ymax)
+    meanOfMean, meanOfMedian, time_vector_m = make_fold_plot(c_filter, t_start, u_color, FR_gradient, plotFolds, norm_by_median, norm_by_mean, mean_freq_traces_b, median_freq_traces_b, mean_freq_traces, median_freq_traces, y_scale, data_col, data_col_mm, title, ymax)
     
     #plot individual well plots
     if plot_wells == True:
@@ -508,19 +513,19 @@ def foldInductionPlusMean_stim(cat_table, baseline_table, stim_table, condition,
             plt.figure()
             well_c = c_filter.query('well == @w')
             well_b = b_filter.query('well == @w')
-            well_mft, well_mftb, well_mdft, well_mdftb, well_color = get_mean_med_traces(well_c, data_col, well_b, FR_gradient)
+            well_mft, well_mftb, well_mdft, well_mdftb, well_color = get_mean_med_traces(well_c, data_col_mm, well_b, FR_gradient)
             well_title = 'Well ' + str(w)
-            make_fold_plot(well_c, t_start, well_color, FR_gradient, plotFolds, norm_by_median, norm_by_mean, well_mftb, well_mdftb, well_mft, well_mdft, y_scale, data_col, well_title, ymax)          
+            make_fold_plot(well_c, t_start, well_color, FR_gradient, plotFolds, norm_by_median, norm_by_mean, well_mftb, well_mdftb, well_mft, well_mdft, y_scale, data_col, data_col_mm, well_title, ymax)          
 
     print('respond to drug: ' + str(len(c_filter['unit_name'].unique())))
     print('stay alive: ' + str(count_live))
     print('real: ' + str(count_real))
     print('condition: ' + str(len(c['unit_name'].unique())))    
     
-    return (c_filter['unit_name'].unique())
+    return (c_filter['unit_name'].unique(), mean_freq_traces[data_col_mm]/meanOfMean, median_freq_traces[data_col_mm]/meanOfMedian, time_vector_m)
 
 
-def foldInductionPlusMean_ctrl(cat_table, baseline_table, stim_table, condition, title, var, minHz, maxHz, ymax, plotFolds, foldMin, y_scale, filter_wells, data_col, plot_group, FR_gradient, norm_by_mean, norm_by_median, plot_wells):
+def foldInductionPlusMean_ctrl(cat_table, baseline_table, stim_table, condition, title, var, minHz, maxHz, ymax, plotFolds, foldMin, y_scale, filter_wells, data_col, data_col_mm, plot_group, FR_gradient, norm_by_mean, norm_by_median, plot_wells):
     '''
     This function plots baseline-normalized plots for a given condition that include both all of the channels passing filters and the mean(black)+median(red) of those channels--use for unstim samples
     '''
@@ -542,9 +547,9 @@ def foldInductionPlusMean_ctrl(cat_table, baseline_table, stim_table, condition,
     if plot_group != 0:
         c_filter, b_filter = psupp.select_homeo_units(plot_group, c_filter, b_filter)
     
-    mean_freq_traces, mean_freq_traces_b, median_freq_traces, median_freq_traces_b, u_color = get_mean_med_traces(c_filter, data_col, b_filter, FR_gradient)
+    mean_freq_traces, mean_freq_traces_b, median_freq_traces, median_freq_traces_b, u_color = get_mean_med_traces(c_filter, data_col_mm, b_filter, FR_gradient)
         
-    meanOfMean, meanOfMedian = make_fold_plot(c_filter, t_start, u_color, FR_gradient, plotFolds, norm_by_median, norm_by_mean, mean_freq_traces_b, median_freq_traces_b, mean_freq_traces, median_freq_traces, y_scale, data_col, title, ymax)
+    meanOfMean, meanOfMedian, time_vector_m = make_fold_plot(c_filter, t_start, u_color, FR_gradient, plotFolds, norm_by_median, norm_by_mean, mean_freq_traces_b, median_freq_traces_b, mean_freq_traces, median_freq_traces, y_scale, data_col, data_col_mm, title, ymax)
     
     #plot individual well plots
     if plot_wells == True:
@@ -552,19 +557,19 @@ def foldInductionPlusMean_ctrl(cat_table, baseline_table, stim_table, condition,
             plt.figure()
             well_c = c_filter.query('well == @w')
             well_b = b_filter.query('well == @w')
-            well_mft, well_mftb, well_mdft, well_mdftb, well_color = get_mean_med_traces(well_c, data_col, well_b, FR_gradient)
+            well_mft, well_mftb, well_mdft, well_mdftb, well_color = get_mean_med_traces(well_c, data_col_mm, well_b, FR_gradient)
             well_title = 'Well ' + str(w)
-            make_fold_plot(well_c, t_start, well_color, FR_gradient, plotFolds, norm_by_median, norm_by_mean, well_mftb, well_mdftb, well_mft, well_mdft, y_scale, data_col, well_title, ymax)
+            make_fold_plot(well_c, t_start, well_color, FR_gradient, plotFolds, norm_by_median, norm_by_mean, well_mftb, well_mdftb, well_mft, well_mdft, y_scale, data_col, data_col_mm, well_title, ymax)
     
     print('stay alive: ' + str(count_live))
     print('real: ' + str(count_real))
     print('condition: ' + str(len(c['unit_name'].unique())))
     
     plt.show()
-    
-    return (c_filter['unit_name'].unique(), mean_freq_traces[data_col]/meanOfMean, median_freq_traces[data_col]/meanOfMedian)
 
-def foldInductionPlusMean(cat_table, drug_time, condition, title, var=10, minHz = 0.001, maxHz = 100, ind_filter = True, ymax = 10, plotFolds = True, foldMin = 0.001, y_scale = 'linear', filter_wells = False, data_col ='spike_freq', plot_group = 0, FR_gradient = True, norm_by_mean = pd.Series([]), norm_by_median = pd.Series([]), plot_wells=True):
+    return (c_filter['unit_name'].unique(), mean_freq_traces[data_col_mm]/meanOfMean, median_freq_traces[data_col_mm]/meanOfMedian, time_vector_m)
+
+def foldInductionPlusMean(cat_table, drug_time, condition, title, var=10, minHz = 0.001, maxHz = 100, ind_filter = True, ymax = 10, plotFolds = True, foldMin = 0.001, y_scale = 'linear', filter_wells = False, data_col ='spike_freq', data_col_mm = 'folds', plot_group = 0, FR_gradient = True, norm_by_mean = pd.Series([]), norm_by_median = pd.Series([]), plot_wells=True):
     '''
     Combine stim and ctrl fxns
     '''
@@ -573,11 +578,11 @@ def foldInductionPlusMean(cat_table, drug_time, condition, title, var=10, minHz 
     baseline_table = cat_table.query('time < @drug_time')
     stim_table = cat_table.query('time >= @drug_time')
     if ind_filter:
-        filtered_units = foldInductionPlusMean_stim(cat_table, baseline_table, stim_table, condition, title, var, minHz, maxHz, ymax, plotFolds, foldMin, y_scale, filter_wells, data_col, plot_group, FR_gradient, norm_by_mean, norm_by_median, plot_wells)
+        filtered_units, mean, median, time_vector = foldInductionPlusMean_stim(cat_table, baseline_table, stim_table, condition, title, var, minHz, maxHz, ymax, plotFolds, foldMin, y_scale, filter_wells, data_col, data_col_mm, plot_group, FR_gradient, norm_by_mean, norm_by_median, plot_wells)
     else:
-        filtered_units, mean, median = foldInductionPlusMean_ctrl(cat_table, baseline_table, stim_table, condition, title, var, minHz, maxHz, ymax, plotFolds, foldMin, y_scale, filter_wells, data_col, plot_group, FR_gradient, norm_by_mean, norm_by_median, plot_wells)
+        filtered_units, mean, median, time_vector = foldInductionPlusMean_ctrl(cat_table, baseline_table, stim_table, condition, title, var, minHz, maxHz, ymax, plotFolds, foldMin, y_scale, filter_wells, data_col, data_col_mm, plot_group, FR_gradient, norm_by_mean, norm_by_median, plot_wells)
         
-    return filtered_units, mean, median
+    return filtered_units, mean, median, time_vector
 
 
 def count_active_neurons(cat_table, baseline_table = 0, stim_table = 0, threshold = 0.001, folds = 0, kill_neurons = 0, return_value = 0):
