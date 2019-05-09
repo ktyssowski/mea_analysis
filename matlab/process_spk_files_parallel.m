@@ -91,7 +91,8 @@ function batch_process_spk_files_parallel(spk_paths, filler_arg)
                 'valid', false ...
             );
         end
-        % Get Stimulation Data, if it exists
+        % Get Stimulation Data, if it exists - IRRELEVANT to homoestasis
+        % paper
         if i <= length(axis_loader_p.file_objs)
             FileData = axis_loader_p.file_objs{i};
             file_rec_start = FileData.DataSets.Header.FileStartTime;
@@ -104,7 +105,7 @@ function batch_process_spk_files_parallel(spk_paths, filler_arg)
         end
     end
     
-    % Sort stim times
+    % Sort stim times - IRRELEVANT to homoestasis paper
     stim_times = sort(stim_times);
     
     % Update final spike time
@@ -140,7 +141,7 @@ function mean_waveforms = get_average_waveforms(spikes, n_clusters, class_number
     end
 
 function n_clusters = estimate_n_clusters(models)
-    % has to be done this way since matlab is an nasty betch w/o list comprehensions 0_0
+    % has to be done this way since matlab doesn't have list comprehensions 0_0
     n_clusters = 1;
     for i = 1:numel(models)
         if models{n_clusters}.BIC < models{i}.BIC
