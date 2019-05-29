@@ -44,6 +44,9 @@ def get_row_col_number_tuple(unit_name):
     return (row_num, col_num)
 
 def map_classic_to_lumos(cat_table, map_path, dest_path):
+    """
+    Converts Axion's electrode mapping system for opaque "Classic" plates to "Lumos" plates
+    """
     mapping = pd.read_csv(map_path)
     for orig_str, new_str in zip(mapping['CytoView Well / Electrode'], mapping['48 Well Classic Well / Electrode']):
         cat_table['unit_name'] = cat_table['unit_name'].str.replace(orig_str, new_str)
@@ -83,6 +86,10 @@ def get_electrode_number(unit_name):
     return ((well-1)*16 + (int(unit_name[2])-1)*4 + int(unit_name[3]))
 
 def get_ele_row_col_number_tuple(unit_name):
+    """
+    Returns the (row_number, col_number) tuple corresponding to the row_number and column of the 
+        electrode specified by unit_name.
+    """
     row = int(unit_name[3])
     col = int(unit_name[2])
     return (row, col)
