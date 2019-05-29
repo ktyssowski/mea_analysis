@@ -17,7 +17,7 @@ Downloading and Installing the Code
 
 You can download this code using git. Open a terminal, navigate to a directory of your chosing and run the following command:
 ```
-git clone https://github.com/sdrendall/mea_analysis
+git clone https://github.com/ktyssowski/mea_analysis
 ```
 This will create a `mea_analysis` directory in your current directory that contains the latest version of the code. To update to the most recent version of the codebase, run the following from within the `mea_analysis` directory:
 ```
@@ -44,13 +44,13 @@ Once you've done that, you should be able to import the pymea module into python
 Installing the Matlab code
 --------------------------
 All of the matlab dependencies required by this package are included with the repo. All you need to do is add them to your path. The easiest way to do this is to use the buttons on the matlab console. Open matlab, and select the "set path" option:
-![alt text](https://github.com/sdrendall/mea_analysis/blob/master/tutorial_pictures/click_set_path.png?raw=true "Select Set Path")
+![alt text](https://github.com/ktyssowski/mea_analysis/blob/master/tutorial_pictures/click_set_path.png?raw=true "Select Set Path")
 Choose the "Add with Subfolders" option:
-![alt text](https://github.com/sdrendall/mea_analysis/blob/master/tutorial_pictures/click_add_with_sub_folders.png?raw=true "select Add With Subfolders")
+![alt text](https://github.com/ktyssowski/mea_analysis/blob/master/tutorial_pictures/click_add_with_sub_folders.png?raw=true "select Add With Subfolders")
 Navigate to and select the `matlab` folder within the `mea_analysis` directory:
-![alt text](https://github.com/sdrendall/mea_analysis/blob/master/tutorial_pictures/select_matlab_folder.png?raw=true "Select the Matlab Folder")
+![alt text](https://github.com/ktyssowski/mea_analysis/blob/master/tutorial_pictures/select_matlab_folder.png?raw=true "Select the Matlab Folder")
 Click "save" to save the changes to your Matlab path:
-![alt text](https://github.com/sdrendall/mea_analysis/blob/master/tutorial_pictures/click_save.png?raw=true "Click Save")
+![alt text](https://github.com/ktyssowski/mea_analysis/blob/master/tutorial_pictures/click_save.png?raw=true "Click Save")
 And you're done! You should be able to run the matlab code in this repo if you followed the instructions correctly!
 
 Installing the Matlab code on Orchestra/O2
@@ -135,7 +135,7 @@ Memory and time needed will vary according to the size of the .mat file.
 
 Pymea
 -----
-I wrote a python module that can be used to quickly create some commonly used plots. A jupyter notebook containing a tutorial for the most useful features is [here](https://github.com/sdrendall/mea_analysis/blob/master/jupyter_notebooks/Pymea%20Tutorial.ipynb). \
+I wrote a python module that can be used to quickly create some commonly used plots. A jupyter notebook containing a tutorial for the most useful features is [here](https://github.com/ktyssowski/mea_analysis/blob/master/jupyter_notebooks/Pymea%20Tutorial.ipynb). \
 \
 Here is an index of what's in the module:
 ### matlab_compatibility.py
@@ -167,7 +167,7 @@ Here is an index of what's in the module:
 `plot_unit_means_per_rec` - Plots the mean firing of each unit per recording session\
 `plot_means_per_rec` - Plots the mean firing of each condition per recording session\
 `plot_medians_per_rec` - Plots the median firing of each condition per recording session\
-`construct_categorized_dataframe` - Creates a dataframe that includes category information for unit spike timecourses. See [this tutorial](https://github.com/sdrendall/mea_analysis/blob/master/jupyter_notebooks/Pymea%20Tutorial.ipynb), or [this python notebook](https://github.com/sdrendall/mea_analysis/blob/master/jupyter_notebooks/002%20Drug%20Analysis.ipynb) for examples of how you can use this function\
+`construct_categorized_dataframe` - Creates a dataframe that includes category information for unit spike timecourses. See [this tutorial](https://github.com/ktyssowski/mea_analysis/blob/master/jupyter_notebooks/Pymea%20Tutorial.ipynb), or [this python notebook](https://github.com/ktyssowski/mea_analysis/blob/master/jupyter_notebooks/002%20Drug%20Analysis.ipynb) for examples of how you can use this function\
 `smooth_categorized_dataframe_unit_traces` - Smooths the spike frequency traces for each unit in the given category dataframe using the `smooth` function\
 `makeTables` - Makes tables of the baseline portion, stimulated portion and the end portion (i.e. the part of the time course that you deem to have adapted) from the table of the whole time course\
 `foldInductionPlusMean` - This function plots baseline-normalized plots for a given condition that include both all of the channels passing a filters and all the mean(black)+median(red) of those channels\
