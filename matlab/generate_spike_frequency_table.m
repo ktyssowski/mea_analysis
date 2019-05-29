@@ -14,7 +14,7 @@ is_file = @(fp) exist(fp, 'file');
 parser = inputParser();
 parser.addRequired('mat_path', is_file);
 parser.addRequired('output_path');
-parser.addParameter('bin_size', 60, @isnumeric);
+parser.addParameter('bin_size', 300, @isnumeric);
 parser.parse(mat_path, output_path, varargin{:});
 
 mat_data = load( ...
